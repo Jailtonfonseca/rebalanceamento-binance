@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration - {{ super() }}{% endblock %}
+
+{% block content %}
+<h2>Configuration</h2>
+<p>Manage the bot's settings here. API keys are encrypted at rest and never shown again after saving.</p>
+
+<div id="alert-placeholder"></div>
+
+<form id="config-form">
+    <h3>Security & Credentials</h3>
+    <div class="card">
+        <div class="form-group">
+            <label for="admin_password">Change Admin Password</label>
+            <input type="password" id="admin_password" name="admin_password" placeholder="Leave blank to keep current password">
+        </div>
+        <hr>
+        <h4>API Keys</h4>
+        <div class="form-group">
+            <label for="binance_api_key">Binance API Key</label>
+            <input type="text" id="binance_api_key" name="binance_api_key" placeholder="{% if settings.binance.api_key_encrypted %}Already set, enter new key to change{% else %}Enter your Binance API key{% endif %}">
+        </div>
+        <div class="form-group">
+            <label for="binance_secret_key">Binance Secret Key</label>
+            <input type="password" id="binance_secret_key" name="binance_secret_key" placeholder="{% if settings.binance.secret_key_encrypted %}Already set, enter new secret to change{% else %}Enter your Binance secret key{% endif %}">
+        </div>
+        <div class="form-group">
+            <label for="cmc_api_key">CoinMarketCap API Key</label>
+            <input type="text" id="cmc_api_key" name="cmc_api_key" placeholder="{% if settings.cmc.api_key_encrypted %}Already set, enter new key to change{% else %}Enter your CoinMarketCap API key{% endif %}">
+        </div>
+        <button type="button" id="test-keys-btn" class="secondary">Test API Keys</button>
+    </div>
+
+    <h3>Rebalancing Strategy</h3>
+    <div class="card">
+        <div class="form-group">
+            <label for="dry_run">Dry Run Mode</label>
+            <select id="dry_run" name="dry_run">
+                <option value="true" {% if settings.dry_run %}selected{% endif %}>Enabled (Simulate trades, no real orders)</option>
+                <option value="false" {% if not settings.dry_run %}selected{% endif %}>Disabled (Execute real trades)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="strategy">Strategy Type</label>
+            <select id="strategy" name="strategy">
+                <option value="periodic" {% if settings.strategy == 'periodic' %}selected{% endif %}>Periodic</option>
+                <option value="threshold" {% if settings.strategy == 'threshold' %}selected{% endif %}>Threshold</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="periodic_hours">Periodic Interval (Hours)</label>
+            <input type="number" id="periodic_hours" name="periodic_hours" value="{{ settings.periodic_hours }}" min="1">
+        </div>
+        <div class="form-group">
+            <label for="threshold_pct">Rebalance Threshold (%)</label>
+            <input type="number" id="threshold_pct" name="threshold_pct" value="{{ settings.threshold_pct }}" min="0.1" step="0.1">
+        </div>
+    </div>
+
+    <h3>Portfolio & Trading</h3>
+    <div class="card">
+        <div class="form-group">
+            <label for="base_pair">Base Pair</label>
+            <input type="text" id="base_pair" name="base_pair" value="{{ settings.base_pair }}">
+        </div>
+        <div class="form-group">
+            <label for="max_cmc_rank">Max CoinMarketCap Rank</label>
+            <input type="number" id="max_cmc_rank" name="max_cmc_rank" value="{{ settings.max_cmc_rank }}" min="10" max="5000">
+        </div>
+         <div class="form-group">
+            <label for="min_trade_value_usd">Minimum Trade Value (USD)</label>
+            <input type="number" id="min_trade_value_usd" name="min_trade_value_usd" value="{{ settings.min_trade_value_usd }}" min="10" step="1">
+        </div>
+        <hr>
+        <h4>Target Allocations (<span id="total-alloc-pct">0</span>%)</h4>
+        <div id="allocations-container">
+            {% for symbol, pct in settings.allocations.items() %}
+            <div class="allocation-item">
+                <input type="text" name="allocations[{{ symbol }}]" placeholder="Asset (e.g. BTC)" value="{{ symbol }}" class="alloc-symbol">
+                <input type="number" name="allocations[{{ symbol }}]" placeholder="%" value="{{ pct }}" min="0" max="100" step="0.1" class="alloc-pct">
+                <button type="button" class="remove-alloc-btn">&times;</button>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" id="add-alloc-btn" class="secondary">Add Asset</button>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" id="save-btn">Save Configuration</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const allocationsContainer = document.getElementById('allocations-container');
+    const addAllocBtn = document.getElementById('add-alloc-btn');
+    const totalPctSpan = document.getElementById('total-alloc-pct');
+    const form = document.getElementById('config-form');
+    const saveBtn = document.getElementById('save-btn');
+    const testKeysBtn = document.getElementById('test-keys-btn');
+    const alertPlaceholder = document.getElementById('alert-placeholder');
+
+    function createAlert(message, type = 'danger') {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<div class="alert alert-${type}" role="alert">${message}</div>`;
+        alertPlaceholder.innerHTML = ''; // Clear previous alerts
+        alertPlaceholder.append(wrapper);
+    }
+
+    function calculateTotalAllocation() {
+        let total = 0;
+        document.querySelectorAll('.alloc-pct').forEach(input => {
+            total += parseFloat(input.value) || 0;
+        });
+        totalPctSpan.textContent = total.toFixed(1);
+        totalPctSpan.style.color = Math.round(total) === 100 ? 'var(--success-color)' : 'var(--danger-color)';
+    }
+
+    function addAllocationRow(symbol = '', pct = '') {
+        const div = document.createElement('div');
+        div.className = 'allocation-item';
+        div.innerHTML = `
+            <input type="text" placeholder="Asset (e.g. BTC)" value="${symbol.toUpperCase()}" class="alloc-symbol">
+            <input type="number" placeholder="%" value="${pct}" min="0" max="100" step="0.1" class="alloc-pct">
+            <button type="button" class="remove-alloc-btn">&times;</button>
+        `;
+        allocationsContainer.appendChild(div);
+        div.querySelector('.remove-alloc-btn').addEventListener('click', () => div.remove());
+        div.querySelector('.alloc-pct').addEventListener('input', calculateTotalAllocation);
+    }
+
+    addAllocBtn.addEventListener('click', () => addAllocationRow());
+
+    allocationsContainer.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-alloc-btn')) {
+            e.target.closest('.allocation-item').remove();
+            calculateTotalAllocation();
+        }
+    });
+
+    allocationsContainer.addEventListener('input', function(e) {
+        if (e.target.classList.contains('alloc-pct')) {
+            calculateTotalAllocation();
+        }
+    });
+
+    // Handle form submission
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        saveBtn.textContent = 'Saving...';
+        saveBtn.disabled = true;
+
+        const formData = new FormData();
+        // Collect all form data
+        new FormData(form).forEach((value, key) => {
+            // We handle allocations separately
+            if (!key.startsWith('allocations[')) {
+                formData.append(key, value);
+            }
+        });
+
+        // Collect allocations correctly
+        document.querySelectorAll('.allocation-item').forEach(item => {
+            const symbol = item.querySelector('.alloc-symbol').value.toUpperCase();
+            const pct = item.querySelector('.alloc-pct').value;
+            if (symbol && pct) {
+                formData.append(`allocations[${symbol}]`, pct);
+            }
+        });
+
+        try {
+            const response = await fetch('/api/v1/config', {
+                method: 'POST',
+                body: new URLSearchParams(formData) // FastAPI Form depends on this format
+            });
+
+            if (response.ok) {
+                createAlert('Configuration saved successfully!', 'success');
+                // Optionally reload or update UI
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                const errorData = await response.json();
+                createAlert(`Failed to save: ${errorData.detail || 'Unknown error'}`);
+            }
+        } catch (error) {
+            createAlert(`An error occurred: ${error.message}`);
+        } finally {
+            saveBtn.textContent = 'Save Configuration';
+            saveBtn.disabled = false;
+        }
+    });
+
+    // Handle Test API Keys
+    testKeysBtn.addEventListener('click', async function () {
+        testKeysBtn.textContent = 'Testing...';
+        testKeysBtn.disabled = true;
+
+        // First, save the current keys in the form if any are entered
+        await fetch('/api/v1/config', {
+            method: 'POST',
+            body: new URLSearchParams(new FormData(form))
+        });
+
+        try {
+            const response = await fetch('/api/v1/config/test-keys', { method: 'POST' });
+            const result = await response.json();
+
+            if (response.ok) {
+                let report = '<strong>API Key Test Results:</strong><br>';
+                report += `Binance: <span style="color:var(--success-color)">${result.binance.message}</span><br>`;
+                report += `CoinMarketCap: <span style="color:var(--success-color)">${result.cmc.message}</span>`;
+                createAlert(report, 'success');
+            } else {
+                 let report = '<strong>API Key Test Results:</strong><br>';
+                 const details = result.detail;
+                 report += `Binance: <span style="color:${details.binance.status === 'success' ? 'var(--success-color)' : 'var(--danger-color)'}">${details.binance.message}</span><br>`;
+                 report += `CoinMarketCap: <span style="color:${details.cmc.status === 'success' ? 'var(--success-color)' : 'var(--danger-color)'}">${details.cmc.message}</span>`;
+                 createAlert(report, 'danger');
+            }
+        } catch (error) {
+            createAlert(`An error occurred: ${error.message}`);
+        } finally {
+            testKeysBtn.textContent = 'Test API Keys';
+            testKeysBtn.disabled = false;
+        }
+    });
+
+    // Initial calculation
+    calculateTotalAllocation();
+});
+</script>
+{% endblock %}

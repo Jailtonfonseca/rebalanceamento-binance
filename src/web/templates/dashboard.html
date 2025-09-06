@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ super() }}{% endblock %}
+
+{% block content %}
+<div id="alert-placeholder"></div>
+
+<div class="card">
+    <h2>Control Panel</h2>
+    <p>Manually trigger a rebalancing run. The bot will use the currently saved configuration.</p>
+    <div class="form-actions">
+        <button id="run-rebalance-btn" class="button">Run Rebalance</button>
+        <button id="run-dry-run-btn" class="button secondary">Run Dry Run</button>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Last Run Status</h2>
+    {% if last_run %}
+    <p><strong>Run ID:</strong> {{ last_run.run_id }}</p>
+    <p><strong>Timestamp:</strong> {{ last_run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
+    <p><strong>Status:</strong> <span class="status-{{ last_run.status.lower() }}">{{ last_run.status }}</span> {% if last_run.is_dry_run %}(Dry Run){% endif %}</p>
+    <p><strong>Summary:</strong> {{ last_run.summary_message }}</p>
+    {% if last_run.errors %}
+    <div class="errors">
+        <strong>Errors:</strong>
+        <ul>
+            {% for error in last_run.errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    {% else %}
+    <p>No rebalancing runs have been recorded yet.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Current Balances</h2>
+    <div id="balances-loading">Loading balances...</div>
+    <div id="balances-content" style="display:none;">
+        <h3 id="total-balance-usd">$0.00</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Asset</th>
+                    <th>Quantity</th>
+                    <th>Value (USD)</th>
+                </tr>
+            </thead>
+            <tbody id="balances-table-body">
+                <!-- Rows will be inserted here by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+    <div id="balances-error" style="display:none; color: var(--danger-color);"></div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const runBtn = document.getElementById('run-rebalance-btn');
+    const dryRunBtn = document.getElementById('run-dry-run-btn');
+    const alertPlaceholder = document.getElementById('alert-placeholder');
+
+    function createAlert(message, type = 'danger') {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<div class="alert alert-${type}" role="alert">${message}</div>`;
+        alertPlaceholder.innerHTML = ''; // Clear previous alerts
+        alertPlaceholder.append(wrapper);
+        window.scrollTo(0, 0);
+    }
+
+    async function runRebalance(isDryRun) {
+        const btn = isDryRun ? dryRunBtn : runBtn;
+        btn.textContent = 'Running...';
+        btn.disabled = true;
+        if (isDryRun) runBtn.disabled = true; else dryRunBtn.disabled = true;
+
+        try {
+            const response = await fetch(`/api/v1/rebalance/run?dry=${isDryRun}`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                createAlert(`Run ${result.status}: ${result.message}`, 'success');
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                createAlert(`Failed to start run: ${result.detail || 'Unknown error'}`);
+            }
+        } catch (error) {
+            createAlert(`An error occurred: ${error.message}`);
+        } finally {
+            runBtn.textContent = 'Run Rebalance';
+            dryRunBtn.textContent = 'Run Dry Run';
+            runBtn.disabled = false;
+            dryRunBtn.disabled = false;
+        }
+    }
+
+    runBtn.addEventListener('click', () => runRebalance(false));
+    dryRunBtn.addEventListener('click', () => runRebalance(true));
+
+    // Fetch and display balances
+    async function fetchBalances() {
+        const loadingDiv = document.getElementById('balances-loading');
+        const contentDiv = document.getElementById('balances-content');
+        const errorDiv = document.getElementById('balances-error');
+        const tableBody = document.getElementById('balances-table-body');
+        const totalBalanceEl = document.getElementById('total-balance-usd');
+
+        try {
+            const response = await fetch('/api/v1/status/balances');
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            totalBalanceEl.textContent = `$${data.total_value_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            const sortedAssets = Object.keys(data.balances).sort((a, b) => data.balances[b].value_usd - data.balances[a].value_usd);
+
+            for (const asset of sortedAssets) {
+                const balance = data.balances[asset];
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${asset}</td>
+                    <td>${balance.quantity}</td>
+                    <td>$${balance.value_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                `;
+                tableBody.appendChild(row);
+            }
+
+            loadingDiv.style.display = 'none';
+            contentDiv.style.display = 'block';
+
+        } catch (error) {
+            loadingDiv.style.display = 'none';
+            errorDiv.textContent = `Could not load balances: ${error.message}`;
+            errorDiv.style.display = 'block';
+        }
+    }
+
+    fetchBalances();
+});
+</script>
+{% endblock %}

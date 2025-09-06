@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  rebalancer-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rebalancer-bot:latest
+    container_name: rebalancer-bot
+    ports:
+      - "8080:8080"
+    volumes:
+      # Persists the configuration, database, and logs outside the container
+      - ./data:/data
+    environment:
+      # It is recommended to use a .env file for sensitive data like MASTER_KEY
+      # Create a .env file in the same directory with the line:
+      # MASTER_KEY=your_super_secret_key_here
+      - MASTER_KEY=${MASTER_KEY}
+      # This ensures the app inside the container uses the correct data directory
+      - DATA_DIR=/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: './data'

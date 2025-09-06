@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+pydantic
+cryptography
+bcrypt
+apscheduler
+tenacity
+sqlalchemy
+httpx
+python-multipart
+jinja2
+ruff
+black
+mypy
+prometheus-fastapi-instrumentator
