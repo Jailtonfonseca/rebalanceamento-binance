@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}History - {{ super() }}{% endblock %}
+
+{% block content %}
+<h2>Rebalancing History</h2>
+<p>Showing the last 100 runs.</p>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Timestamp (UTC)</th>
+                <th>Status</th>
+                <th>Mode</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for run in history %}
+            <tr>
+                <td>{{ run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>
+                    <span class="status-{{ run.status.lower() }}">{{ run.status }}</span>
+                </td>
+                <td>
+                    {% if run.is_dry_run %}
+                    <span class="mode-dry">Dry Run</span>
+                    {% else %}
+                    <span class="mode-live">Live</span>
+                    {% endif %}
+                </td>
+                <td>{{ run.summary_message }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center;">No history found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .status-success, .status-dry_run { color: var(--success-color); font-weight: bold; }
+    .status-partial_success { color: #856404; font-weight: bold; }
+    .status-failed { color: var(--danger-color); font-weight: bold; }
+    .mode-dry { color: var(--secondary-color); }
+    .mode-live { color: var(--primary-color); font-weight: bold; }
+</style>
+
+{% endblock %}
