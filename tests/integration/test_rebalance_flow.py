@@ -112,6 +112,7 @@ async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_m
     # Target: BTC 60%, ETH 40%.
     # Sell BTC: 12% of 100k = 12k. Buy ETH: 22% of 100k = 22k.
     assert result.status == "DRY_RUN"
+    assert "Simulação concluída" in result.message
     assert len(result.trades) == 2
 
     sell_trade = next((t for t in result.trades if t.side == "SELL"), None)
