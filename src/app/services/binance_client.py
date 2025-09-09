@@ -202,10 +202,15 @@ class BinanceClient:
         endpoint = "/api/v3/exchangeInfo"
         params = {}
         if symbols:
-            # Binance expects a JSON array string for the 'symbols' parameter.
-            # httpx's 'params' would URL-encode the characters `[]"` which
-            # Binance rejects. So, we add it to the params dict as is.
-            params = {"symbols": json.dumps(symbols)}
+            # Binance's API for this endpoint expects the 'symbols' parameter to be a
+            # string that looks like a JSON array, e.g., '["BTCUSDT","ETHUSDT"]'.
+            # The httpx library, by default, URL-encodes the `[` `]` and `"` characters,
+            # which causes the Binance API to reject the request.
+            # To work around this, we manually append the query string for the 'symbols'
+            # parameter and pass an empty 'params' dict to the request method for
+            # other parameters if needed in the future.
+            symbols_json_string = json.dumps(symbols)
+            endpoint = f"{endpoint}?symbols={symbols_json_string}"
 
         info = await self._send_request("GET", endpoint, params=params)
 
