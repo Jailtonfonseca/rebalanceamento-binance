@@ -29,7 +29,8 @@ class RebalanceEngine:
         eligible_cmc_symbols: Set[str],
         base_pair: str,
         min_trade_value_usd: float,
-    ) -> List[ProposedTrade]:
+        trade_fee_pct: float,
+    ) -> dict:
         """Calculates the trades needed to match target allocations.
 
         This method performs the following steps:
@@ -40,6 +41,8 @@ class RebalanceEngine:
         4. Proposes trades for deltas that exceed the minimum trade value.
         5. Adjusts trade quantities to comply with exchange rules (e.g.,
            step size) and filters out trades below the minimum notional value.
+        6. Calculates the estimated fee for each trade.
+        7. Simulates the trades to calculate projected final balances.
 
         Args:
             balances: A dictionary of current asset balances.
@@ -49,9 +52,11 @@ class RebalanceEngine:
             eligible_cmc_symbols: A set of symbols that meet the CMC rank criteria.
             base_pair: The base currency for trading (e.g., 'USDT').
             min_trade_value_usd: The minimum value for a trade to be proposed.
+            trade_fee_pct: The trading fee percentage.
 
         Returns:
-            A list of ProposedTrade objects representing the trades to execute.
+            A dictionary containing the list of proposed trades, the total
+            estimated fees, and the projected final balances.
         """
         logger.info("Starting rebalance calculation engine...")
 
@@ -80,30 +85,30 @@ class RebalanceEngine:
 
         if not current_portfolio_values:
             logger.warning("No assets with value found to rebalance.")
-            return []
+            return {"proposed_trades": [], "total_fees_usd": 0, "projected_balances": {}}
 
-        total_eligible_value = sum(current_portfolio_values.values())
-        logger.debug(f"Total eligible portfolio value: ${total_eligible_value:,.2f}")
+        total_eligible_value = sum(v for k, v in current_portfolio_values.items() if k != base_pair)
+        total_portfolio_value = sum(current_portfolio_values.values()) # Includes base pair
+        logger.debug(f"Total eligible portfolio value (for rebalancing): ${total_eligible_value:,.2f}")
+        logger.debug(f"Total portfolio value (including base pair): ${total_portfolio_value:,.2f}")
 
         if total_eligible_value == 0:
             logger.warning("Total portfolio value is zero. Nothing to rebalance.")
-            return []
+            return {"proposed_trades": [], "total_fees_usd": 0, "projected_balances": {}}
 
         # 3. Calculate deltas and generate proposed trades
         proposed_trades: List[ProposedTrade] = []
         for asset in preliminary_assets:
-            # Don't try to sell the base pair itself
             if asset == base_pair:
                 continue
 
             current_value = current_portfolio_values.get(asset, 0.0)
-            current_alloc_pct = (current_value / total_eligible_value) * 100
+            current_alloc_pct = (current_value / total_eligible_value) * 100 if total_eligible_value else 0
             target_alloc_pct = target_allocations.get(asset, 0.0)
 
             delta_pct = target_alloc_pct - current_alloc_pct
             delta_usd = (delta_pct / 100) * total_eligible_value
 
-            # 4. Filter trades that are too small
             if abs(delta_usd) < min_trade_value_usd:
                 continue
 
@@ -113,70 +118,31 @@ class RebalanceEngine:
                 logger.warning(f"No price found for {symbol}. Skipping asset {asset}.")
                 continue
 
-            # 5. Validate against exchange rules (stepSize, minNotional)
             symbol_info = exchange_info.get(symbol)
             if not symbol_info:
-                logger.warning(
-                    f"No exchange info for {symbol}. Skipping asset {asset}."
-                )
+                logger.warning(f"No exchange info for {symbol}. Skipping asset {asset}.")
                 continue
 
-            # Get LOT_SIZE filter for stepSize
-            lot_size_filter = next(
-                (f for f in symbol_info["filters"] if f["filterType"] == "LOT_SIZE"),
-                None,
-            )
-            if not lot_size_filter:
-                logger.warning(f"No LOT_SIZE filter for {symbol}. Skipping.")
+            lot_size_filter = next((f for f in symbol_info.get("filters", []) if f["filterType"] == "LOT_SIZE"), None)
+            min_notional_filter = next((f for f in symbol_info.get("filters", []) if f["filterType"] in ("MIN_NOTIONAL", "NOTIONAL")), None)
+
+            if not lot_size_filter or not min_notional_filter:
+                logger.warning(f"Missing LOT_SIZE or MIN_NOTIONAL filter for {symbol}. Skipping.")
                 continue
+
             step_size = lot_size_filter["stepSize"]
-
-            # Get MIN_NOTIONAL filter
-            min_notional_filter = next(
-                (
-                    f
-                    for f in symbol_info["filters"]
-                    if f["filterType"] == "MIN_NOTIONAL"
-                ),
-                None,
-            )
-            if not min_notional_filter:
-                # Some pairs have NOTIONAL filter instead
-                min_notional_filter = next(
-                    (
-                        f
-                        for f in symbol_info["filters"]
-                        if f["filterType"] == "NOTIONAL"
-                    ),
-                    None,
-                )
-                if not min_notional_filter:
-                    logger.warning(
-                        f"No MIN_NOTIONAL or NOTIONAL filter for {symbol}. Skipping."
-                    )
-                    continue
-
             min_notional_value = float(min_notional_filter["minNotional"])
 
-            # Calculate and adjust quantity
             quantity_to_trade = abs(delta_usd) / price
             adjusted_quantity = adjust_to_step_size(quantity_to_trade, step_size)
-
             final_trade_value = adjusted_quantity * price
 
             if adjusted_quantity <= 0 or final_trade_value < min_notional_value:
-                logger.debug(
-                    f"Trade for {symbol} discarded. Qty: {adjusted_quantity}, Value: ${final_trade_value:.2f} (Min: ${min_notional_value:.2f})"
-                )
                 continue
 
+            fee_cost = final_trade_value * (trade_fee_pct / 100)
             side = "BUY" if delta_usd > 0 else "SELL"
-
-            reason = (
-                f"Target: {target_alloc_pct:.2f}%, "
-                f"Current: {current_alloc_pct:.2f}%, "
-                f"Delta: {delta_pct:.2f}%"
-            )
+            reason = f"Target: {target_alloc_pct:.2f}%, Current: {current_alloc_pct:.2f}%, Delta: {delta_pct:.2f}%"
 
             proposed_trades.append(
                 ProposedTrade(
@@ -186,10 +152,40 @@ class RebalanceEngine:
                     quantity=adjusted_quantity,
                     estimated_value_usd=final_trade_value,
                     reason=reason,
+                    fee_cost_usd=fee_cost,
                 )
             )
-            logger.info(
-                f"Proposing trade: {side} {adjusted_quantity} {asset} for ~${final_trade_value:,.2f}"
-            )
+            logger.info(f"Proposing trade: {side} {adjusted_quantity} {asset} for ~${final_trade_value:,.2f} (Fee: ~${fee_cost:,.2f})")
 
-        return proposed_trades
+        # 4. Calculate projected balances
+        projected_balances = balances.copy()
+        total_fees_usd = sum(trade.fee_cost_usd for trade in proposed_trades)
+
+        for trade in proposed_trades:
+            asset_qty_change = trade.quantity
+            base_qty_change = trade.estimated_value_usd
+
+            if trade.side == "BUY":
+                # Assume fee is paid from the received asset (Binance standard)
+                projected_balances[trade.asset] = projected_balances.get(trade.asset, 0) + (asset_qty_change * (1 - trade_fee_pct / 100))
+                projected_balances[base_pair] -= base_qty_change
+            else:  # SELL
+                projected_balances[trade.asset] -= asset_qty_change
+                # Fee is deducted from the quote asset received
+                projected_balances[base_pair] += base_qty_change * (1 - trade_fee_pct / 100)
+
+        # 5. Format projected balances with USD values
+        final_projected_balances = {}
+        for asset, qty in projected_balances.items():
+            price = prices.get(f"{asset}{base_pair}", 1.0) if asset != base_pair else 1.0
+            final_projected_balances[asset] = {
+                "quantity": qty,
+                "value_usd": qty * price
+            }
+
+
+        return {
+            "proposed_trades": proposed_trades,
+            "total_fees_usd": total_fees_usd,
+            "projected_balances": final_projected_balances,
+        }

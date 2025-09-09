@@ -117,7 +117,7 @@ class RebalanceExecutor:
                 )
 
                 # 2. Run the engine to get the trade plan
-                proposed_trades = self.engine.run(
+                engine_result = self.engine.run(
                     balances=balances,
                     prices=all_prices,
                     exchange_info=exchange_info,
@@ -125,12 +125,15 @@ class RebalanceExecutor:
                     eligible_cmc_symbols=cmc_symbols,
                     base_pair=self.config.base_pair,
                     min_trade_value_usd=self.config.min_trade_value_usd,
+                    trade_fee_pct=self.config.trade_fee_pct,
                 )
 
+                proposed_trades = engine_result["proposed_trades"]
                 if not proposed_trades:
                     message = "O portfólio já está balanceado. Nenhuma transação necessária."
                     result = RebalanceResult(
-                        run_id=run_id, status="SUCCESS", message=message, trades=[]
+                        run_id=run_id, status="SUCCESS", message=message, trades=[],
+                        projected_balances=engine_result["projected_balances"]
                     )
                     self._save_result(result, is_dry_run)
                     return result
@@ -138,7 +141,9 @@ class RebalanceExecutor:
                 # 3. Execute or simulate trades
                 result = await self._execute_plan(proposed_trades, run_id, is_dry_run)
 
-                # 4. Save the result to the database
+                # 4. Add final data to result and save to the database
+                result.projected_balances = engine_result["projected_balances"]
+                result.total_fees_usd = engine_result["total_fees_usd"]
                 self._save_result(result, is_dry_run)
 
                 logger.info(f"--- Finished Rebalance Run (ID: {run_id}) ---")
@@ -237,6 +242,8 @@ class RebalanceExecutor:
             summary_message=result.message,
             trades_executed=[t.dict() for t in result.trades],
             errors=result.errors,
+            total_fees_usd=result.total_fees_usd,
+            projected_balances=result.projected_balances,
         )
         self.db.add(db_run)
         self.db.commit()

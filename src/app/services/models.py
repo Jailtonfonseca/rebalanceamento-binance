@@ -34,6 +34,9 @@ class ProposedTrade(BaseModel):
         description="The estimated value of the trade in the base currency."
     )
     reason: str = Field(description="Explanation for why this trade is proposed.")
+    fee_cost_usd: float = Field(
+        0.0, description="The estimated cost of the trade fee in USD."
+    )
 
 
 class RebalanceResult(BaseModel):
@@ -51,6 +54,9 @@ simulated trades and any errors encountered.
         message: A human-readable summary of the run's outcome.
         trades: A list of trades that were simulated or executed.
         errors: A list of any errors that occurred during execution.
+        total_fees_usd: The total estimated cost of all trade fees in USD.
+        projected_balances: A dictionary of what the new balances would be
+                           after the rebalance.
     """
 
     run_id: str
@@ -62,4 +68,10 @@ simulated trades and any errors encountered.
     )
     errors: Optional[List[str]] = Field(
         None, description="Any errors that occurred during execution."
+    )
+    total_fees_usd: float = Field(
+        0.0, description="The total estimated cost of all trade fees in USD."
+    )
+    projected_balances: Optional[dict] = Field(
+        None, description="The projected balances after the rebalance."
     )
