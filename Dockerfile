@@ -27,13 +27,17 @@ ENV DATA_DIR /data
 # Set up a non-root user
 RUN useradd --create-home --shell /bin/bash appuser
 USER appuser
-WORKDIR /home/appuser
 
 # Copy the virtual environment from the builder stage
-COPY --from=builder /home/appuser/venv ./venv
+# The venv is copied to the user's home, not the workdir, to keep it separate.
+COPY --from=builder /home/appuser/venv /home/appuser/venv
 
-# Copy the application source code
-COPY --chown=appuser:appuser src ./src
+# Set the working directory to be the application's source root
+WORKDIR /home/appuser/src
+
+# Copy the application source code into the working directory
+# The dot '.' means the contents of 'src' go into the current WORKDIR.
+COPY --chown=appuser:appuser src .
 
 # Make the venv activate
 ENV PATH="/home/appuser/venv/bin:$PATH"
@@ -41,5 +45,5 @@ ENV PATH="/home/appuser/venv/bin:$PATH"
 # Expose the port the app runs on
 EXPOSE 8080
 
-# The command to run the application
-CMD ["uvicorn", "src.app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# The command to run the application from within the src directory
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

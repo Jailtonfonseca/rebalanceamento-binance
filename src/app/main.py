@@ -1,3 +1,4 @@
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -20,7 +21,10 @@ app = FastAPI(
 Instrumentator().instrument(app).expose(app)
 
 # --- Static files and Templates ---
-app.mount("/static", StaticFiles(directory="src/web/static"), name="static")
+# Define the path to the static directory relative to this file's location.
+# main.py -> app -> src / web / static
+STATIC_DIR = Path(__file__).parent.parent / "web" / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # --- API Routers ---
 app.include_router(v1_config.router, prefix="/api/v1")
