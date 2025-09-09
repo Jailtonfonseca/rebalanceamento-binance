@@ -1,3 +1,9 @@
+"""Database models and session management for the application.
+
+This module defines the SQLAlchemy ORM models for the application's data,
+sets up the database engine and session management, and provides helper
+functions for database initialization and dependency injection.
+"""
 import json
 from datetime import datetime
 from sqlalchemy import (
@@ -12,6 +18,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.types import TypeDecorator
+from sqlalchemy.engine import Dialect
 
 from app.services.config_manager import DATA_DIR
 
@@ -29,15 +36,40 @@ Base = declarative_base()
 
 # --- Custom JSON Type for SQLite ---
 class Json(TypeDecorator):
+    """A custom SQLAlchemy type to store JSON data in a TEXT column.
+
+    This class handles the serialization of Python objects to JSON strings
+    when writing to the database, and deserialization from JSON strings back
+    to Python objects when reading from the database. It is designed to work
+    with SQLite, which does not have a native JSON type.
+    """
     impl = Text
     cache_ok = True
 
-    def process_bind_param(self, value, dialect):
+    def process_bind_param(self, value: dict | list | None, dialect: Dialect) -> str | None:
+        """Serializes a Python object to a JSON string for database storage.
+
+        Args:
+            value: The Python object to serialize.
+            dialect: The SQLAlchemy dialect in use.
+
+        Returns:
+            A JSON formatted string, or None if the value is None.
+        """
         if value is not None:
             return json.dumps(value)
         return value
 
-    def process_result_value(self, value, dialect):
+    def process_result_value(self, value: str | None, dialect: Dialect) -> dict | list | None:
+        """Deserializes a JSON string from the database into a Python object.
+
+        Args:
+            value: The JSON string from the database.
+            dialect: The SQLAlchemy dialect in use.
+
+        Returns:
+            A Python dictionary or list, or None if the value is None.
+        """
         if value is not None:
             return json.loads(value)
         return value
@@ -47,8 +79,11 @@ class Json(TypeDecorator):
 
 
 class RebalanceRun(Base):
-    """
-    Represents a historical record of a single rebalancing run.
+    """Represents a historical record of a single rebalancing run.
+
+    This model stores comprehensive details about each execution of the
+    rebalancing logic, including its status, timing, outcomes, and any
+    associated data like trades or errors.
     """
 
     __tablename__ = "rebalance_runs"
@@ -71,13 +106,26 @@ class RebalanceRun(Base):
 
 # --- DB Initialization ---
 def init_db():
-    """Creates the database tables."""
+    """Initializes the database and creates tables if they don't exist.
+
+    This function ensures that the data directory exists and then creates all
+    tables defined by the SQLAlchemy Base metadata. It should be called on
+    application startup.
+    """
     DATA_DIR.mkdir(exist_ok=True)
     Base.metadata.create_all(bind=engine)
 
 
 def get_db():
-    """FastAPI dependency to get a DB session."""
+    """A FastAPI dependency to provide a database session per request.
+
+    This generator function creates a new SQLAlchemy session for each incoming
+    request, yields it to the endpoint, and ensures that the session is
+    closed after the request is finished, even if an error occurs.
+
+    Yields:
+        An active SQLAlchemy session.
+    """
     db = SessionLocal()
     try:
         yield db

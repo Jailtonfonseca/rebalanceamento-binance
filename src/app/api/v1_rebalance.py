@@ -1,3 +1,8 @@
+"""API endpoint for triggering the rebalancing process.
+
+This module provides the route to manually initiate a portfolio
+rebalancing run.
+"""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -20,8 +25,23 @@ async def run_rebalance_manually(
     db: Session = Depends(get_db),
     config_manager: ConfigManager = Depends(get_config_manager),
 ):
-    """
-    Manually triggers a rebalancing run.
+    """Manually triggers a rebalancing run.
+
+    This endpoint initializes all the necessary services and invokes the
+    `RebalanceExecutor` to perform the entire rebalancing flow. It allows
+    overriding the dry-run setting for a one-off execution.
+
+    Args:
+        dry: An optional query parameter to override the dry-run setting.
+        db: The database session, injected by FastAPI.
+        config_manager: The configuration manager, injected by FastAPI.
+
+    Returns:
+        A `RebalanceResult` object detailing the outcome of the run.
+
+    Raises:
+        HTTPException: If API keys are not configured, if a run is already
+                       in progress, or if an unexpected error occurs.
     """
     settings = config_manager.get_settings()
 

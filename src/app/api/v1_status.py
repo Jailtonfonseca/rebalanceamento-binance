@@ -1,3 +1,8 @@
+"""API endpoint for fetching the current status of the portfolio.
+
+This module provides the route to get the current asset balances from the
+Binance account and their approximate value in USD.
+"""
 from fastapi import APIRouter, Depends
 
 from app.services.config_manager import get_config_manager, ConfigManager
@@ -10,8 +15,19 @@ router = APIRouter(tags=["Status"])
 async def get_current_balances(
     config_manager: ConfigManager = Depends(get_config_manager),
 ):
-    """
-    Fetches and returns the current portfolio balances from Binance.
+    """Fetches and returns the current portfolio balances from Binance.
+
+    This endpoint connects to the Binance API to get the current balances of all
+    assets in the account. It then calculates the approximate USD value of each
+    asset and the total portfolio value.
+
+    Args:
+        config_manager: The configuration manager, injected by FastAPI.
+
+    Returns:
+        A dictionary containing the total portfolio value and a breakdown of
+        balances for each asset, or an error message if keys are missing or
+        invalid.
     """
     settings = config_manager.get_settings()
     api_key = config_manager.decrypt(settings.binance.api_key_encrypted)

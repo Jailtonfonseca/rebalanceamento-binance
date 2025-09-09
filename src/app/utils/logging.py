@@ -8,11 +8,21 @@ LOGS_DIR = DATA_DIR / "logs"
 
 
 class JsonFormatter(logging.Formatter):
-    """
-    Formats log records as a JSON string.
+    """Formats log records as a JSON string.
+
+    This formatter converts a log record into a JSON object, making it suitable for
+    structured logging environments like ELK stacks or cloud-based logging services.
     """
 
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
+        """Formats a log record into a JSON string.
+
+        Args:
+            record: The log record to format.
+
+        Returns:
+            A JSON string representing the log record.
+        """
         log_object = {
             "timestamp": self.formatTime(record, self.datefmt),
             "level": record.levelname,
@@ -29,8 +39,12 @@ class JsonFormatter(logging.Formatter):
 
 
 def setup_logging():
-    """
-    Configures structured JSON logging for the application.
+    """Configures structured JSON logging for the application.
+
+    This function sets up the root logger to output logs in a structured
+    JSON format to a rotating file, and to the console with a standard
+    human-readable format. It ensures that the log directory exists and
+    configures log rotation to manage file size.
     """
     LOGS_DIR.mkdir(exist_ok=True)
     log_file = LOGS_DIR / "app.log"
@@ -63,5 +77,15 @@ def setup_logging():
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Helper to get a logger instance."""
+    """Gets a logger instance configured by the application setup.
+
+    This is a helper function to obtain a logger that is part of the
+    application's logging hierarchy.
+
+    Args:
+        name: The name of the logger to retrieve. Typically __name__.
+
+    Returns:
+        An instance of logging.Logger.
+    """
     return logging.getLogger(name)

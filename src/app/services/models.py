@@ -1,3 +1,9 @@
+"""Pydantic models for data structures used within the application's services.
+
+This module defines the data transfer objects (DTOs) that are used to pass
+structured data between different components of the rebalancing service layer,
+such as the rebalancing engine and the executor.
+"""
 from datetime import datetime
 from typing import List, Literal, Optional
 
@@ -5,9 +11,19 @@ from pydantic import BaseModel, Field
 
 
 class ProposedTrade(BaseModel):
-    """
-    Represents a single trade calculated by the rebalancing engine,
-    validated against exchange rules.
+    """Represents a single trade calculated by the rebalancing engine.
+
+    This model contains all the necessary information for executing a trade,
+    including the symbol, side, and quantity, which has already been validated
+    against the exchange's trading rules (e.g., step size).
+
+    Attributes:
+        symbol: The trading pair, e.g., 'BTCUSDT'.
+        asset: The asset being traded, e.g., 'BTC'.
+        side: The order side, either 'BUY' or 'SELL'.
+        quantity: The final, adjusted quantity to be traded.
+        estimated_value_usd: The estimated value of the trade in USD.
+        reason: An explanation for why this trade is proposed.
     """
 
     symbol: str = Field(description="The trading pair, e.g., 'BTCUSDT'.")
@@ -21,8 +37,20 @@ class ProposedTrade(BaseModel):
 
 
 class RebalanceResult(BaseModel):
-    """
-    Represents the outcome of a rebalancing execution.
+    """Represents the outcome of a rebalancing execution.
+
+    This model captures all relevant information about a completed rebalancing
+    run, including its status, a summary message, and lists of executed
+ator
+simulated trades and any errors encountered.
+
+    Attributes:
+        run_id: A unique identifier for the rebalancing run.
+        timestamp: The UTC timestamp when the run was initiated.
+        status: The final status of the run.
+        message: A human-readable summary of the run's outcome.
+        trades: A list of trades that were simulated or executed.
+        errors: A list of any errors that occurred during execution.
     """
 
     run_id: str

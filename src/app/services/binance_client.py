@@ -1,3 +1,9 @@
+"""A client for interacting with the Binance API.
+
+This module provides a high-level, asynchronous client for the Binance REST API,
+including methods for account management, fetching market data, and placing orders.
+It also defines custom exceptions for handling API-specific errors.
+"""
 import time
 import hmac
 import hashlib
@@ -12,7 +18,12 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 class BinanceException(Exception):
-    """Base exception for Binance client errors."""
+    """Base exception for Binance client errors.
+
+    Attributes:
+        message: The error message from the API.
+        code: The error code from the API.
+    """
 
     def __init__(self, message: str, code: int = -1):
         self.message = message
@@ -21,7 +32,11 @@ class BinanceException(Exception):
 
 
 class InvalidAPIKeys(BinanceException):
-    """Exception for invalid API keys."""
+    """Exception raised for invalid or expired API keys.
+
+    This is a specialized subclass of BinanceException that indicates a problem
+    with authentication, specifically the API key or secret.
+    """
 
     pass
 
@@ -30,16 +45,40 @@ class InvalidAPIKeys(BinanceException):
 
 
 class BinanceClient:
+    """An asynchronous client for the Binance API.
+
+    This client handles request signing, error handling, and API interactions
+    such as fetching account data, market data, and executing orders.
+
+    Attributes:
+        api_key: The public API key for Binance.
+        secret_key: The secret key for signing requests.
+        base_url: The base URL for the Binance API.
+    """
     def __init__(
         self, api_key: str, secret_key: str, base_url: str = "https://api.binance.com"
     ):
+        """Initializes the BinanceClient.
+
+        Args:
+            api_key: The public API key for Binance.
+            secret_key: The secret key for signing requests.
+            base_url: The base URL for the Binance API endpoint.
+        """
         self.api_key = api_key
         self.secret_key = secret_key
         self.base_url = base_url
         self._exchange_info_cache: Optional[Dict[str, Any]] = None
 
     def _generate_signature(self, data: Dict[str, Any]) -> str:
-        """Generates a HMAC-SHA256 signature for a request."""
+        """Generates a HMAC-SHA256 signature for a request payload.
+
+        Args:
+            data: A dictionary of parameters to be signed.
+
+        Returns:
+            The hexadecimal HMAC-SHA256 signature.
+        """
         return hmac.new(
             self.secret_key.encode("utf-8"),
             urlencode(data).encode("utf-8"),
@@ -55,8 +94,25 @@ class BinanceClient:
         endpoint: str,
         params: Optional[Dict[str, Any]] = None,
         signed: bool = False,
-    ):
-        """A generic method to send requests to the Binance API."""
+    ) -> Dict[str, Any] | List[Dict[str, Any]]:
+        """Sends a request to the Binance API, with retries on failure.
+
+        This is a generic internal method that handles request signing,
+        sending the HTTP request, and basic error handling.
+
+        Args:
+            method: The HTTP method (e.g., 'GET', 'POST').
+            endpoint: The API endpoint path (e.g., '/api/v3/account').
+            params: A dictionary of request parameters.
+            signed: Whether the request requires a signature.
+
+        Returns:
+            The JSON response from the API as a dictionary or list.
+
+        Raises:
+            InvalidAPIKeys: If the API keys are invalid.
+            BinanceException: For other API-related errors.
+        """
         params = params or {}
         headers = {"X-MBX-APIKEY": self.api_key}
 
@@ -85,7 +141,18 @@ class BinanceClient:
                 raise BinanceException(error_msg, error_code) from e
 
     async def test_connectivity(self) -> Dict[str, Any]:
-        """Tests API key validity by fetching account information."""
+        """Tests connectivity and API key validity by fetching account info.
+
+        This method makes a signed request to the account endpoint. A successful
+        response indicates valid API keys and a working connection.
+
+        Returns:
+            The raw account information dictionary from the API.
+
+        Raises:
+            InvalidAPIKeys: If the API keys are invalid or lack permissions.
+            BinanceException: For other API or connection errors.
+        """
         try:
             return await self._send_request("GET", "/api/v3/account", signed=True)
         except BinanceException as e:
@@ -97,7 +164,14 @@ class BinanceClient:
             raise
 
     async def get_account_balances(self) -> Dict[str, float]:
-        """Fetches all asset balances for the account."""
+        """Fetches all non-zero asset balances for the account.
+
+        This method retrieves the account information and filters it to return
+        only the assets with a 'free' balance greater than zero.
+
+        Returns:
+            A dictionary mapping asset symbols to their free balance as a float.
+        """
         account_info = await self.test_connectivity()
         balances = {}
         for asset in account_info.get("balances", []):
@@ -109,7 +183,19 @@ class BinanceClient:
     async def get_exchange_info(
         self, symbols: Optional[List[str]] = None
     ) -> Dict[str, Any]:
-        """Fetches trading rules, optionally filtering by symbols."""
+        """Fetches exchange trading rules and symbol information.
+
+        This method retrieves comprehensive information about trading rules,
+        symbol details, and filters. The result is cached for subsequent calls
+        to avoid redundant API requests.
+
+        Args:
+            symbols: An optional list of symbols to fetch information for.
+                     If None, information for all symbols is fetched.
+
+        Returns:
+            A dictionary mapping symbols to their exchange information.
+        """
         if self._exchange_info_cache:
             return self._exchange_info_cache
 
@@ -123,7 +209,20 @@ class BinanceClient:
     def get_symbol_filter(
         self, symbol: str, filter_type: str
     ) -> Optional[Dict[str, Any]]:
-        """Helper to get a specific filter from cached exchange info."""
+        """Retrieves a specific filter for a symbol from cached exchange info.
+
+        This is a helper method that must be called after get_exchange_info().
+
+        Args:
+            symbol: The trading symbol (e.g., 'BTCUSDT').
+            filter_type: The type of filter to retrieve (e.g., 'LOT_SIZE').
+
+        Returns:
+            A dictionary representing the filter, or None if not found.
+
+        Raises:
+            RuntimeError: If exchange info has not been cached first.
+        """
         if not self._exchange_info_cache:
             raise RuntimeError("Call get_exchange_info() before using this method.")
 
@@ -137,14 +236,29 @@ class BinanceClient:
         return None
 
     async def get_all_prices(self) -> Dict[str, float]:
-        """Fetches the latest price for all symbols."""
+        """Fetches the latest market price for all symbols.
+
+        Returns:
+            A dictionary mapping each symbol to its latest price as a float.
+        """
         prices_data = await self._send_request("GET", "/api/v3/ticker/price")
         return {item["symbol"]: float(item["price"]) for item in prices_data}
 
     async def create_order(
         self, symbol: str, side: str, quantity: float, test: bool = False
     ) -> Dict[str, Any]:
-        """Creates a market order."""
+        """Creates a market order.
+
+        Args:
+            symbol: The trading symbol (e.g., 'BTCUSDT').
+            side: The order side ('BUY' or 'SELL').
+            quantity: The amount to buy or sell.
+            test: If True, sends a test order that is validated but not
+                  executed. Defaults to False.
+
+        Returns:
+            The API response from the order creation endpoint.
+        """
         params = {
             "symbol": symbol,
             "side": side.upper(),

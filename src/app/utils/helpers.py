@@ -3,14 +3,21 @@ from decimal import Decimal, ROUND_DOWN
 
 
 def adjust_to_step_size(quantity: float, step_size: str) -> float:
-    """
-    Adjusts a quantity to the specified step size.
+    """Adjusts a quantity to the specified step size.
+
     Rounds down to the nearest multiple of the step size.
 
     For example:
     - adjust_to_step_size(0.12345, "0.001") -> 0.123
     - adjust_to_step_size(153.45, "10") -> 150.0
     - adjust_to_step_size(0.12345678, "0.000001") -> 0.123456
+
+    Args:
+        quantity: The quantity to adjust.
+        step_size: The step size to which the quantity is adjusted.
+
+    Returns:
+        The adjusted quantity.
     """
     if not isinstance(quantity, (float, int)) or not isinstance(step_size, str):
         raise ValueError("Invalid input types for adjust_to_step_size")

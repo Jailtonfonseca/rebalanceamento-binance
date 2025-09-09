@@ -1,8 +1,14 @@
+"""Manages the scheduled execution of the rebalancing process.
+
+This module uses APScheduler to run the rebalancing job at a configurable
+interval. It defines the job itself and provides a function to configure
+and start the scheduler based on the application's settings.
+"""
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.db.models import SessionLocal
-from app.services.config_manager import get_config_manager
+from app.services.config_manager import get_config_manager, AppSettings
 from app.services.binance_client import BinanceClient
 from app.services.cmc_client import CoinMarketCapClient
 from app.services.rebalance_engine import RebalanceEngine
@@ -15,9 +21,15 @@ scheduler = AsyncIOScheduler(timezone="UTC")
 
 
 async def scheduled_rebalance_job():
-    """
-    This is the function that the scheduler will call periodically.
-    It sets up all dependencies and runs the rebalancing flow.
+    """The core function executed by the scheduler.
+
+    This job performs the following actions:
+    1. Initializes all necessary services and clients within its own scope.
+    2. Checks if the conditions for a periodic run are met (strategy is
+       'periodic' and not in dry run mode).
+    3. Creates a new database session for the job.
+    4. Initializes and runs the `RebalanceExecutor` to perform the flow.
+    5. Handles any exceptions and ensures the database session is closed.
     """
     logger.info("Scheduler triggered: Starting periodic rebalance job...")
 
@@ -73,8 +85,16 @@ async def scheduled_rebalance_job():
         logger.info("Scheduler job finished.")
 
 
-def setup_scheduler(settings):
-    """Adds the rebalance job to the scheduler and starts it."""
+def setup_scheduler(settings: AppSettings):
+    """Configures and starts the scheduler.
+
+    This function adds the `scheduled_rebalance_job` to the scheduler with
+    the interval specified in the application settings. If the scheduler is
+    not already running, it starts it.
+
+    Args:
+        settings: The application settings object containing scheduler config.
+    """
     if scheduler.get_job("periodic_rebalance"):
         scheduler.remove_job("periodic_rebalance")
 

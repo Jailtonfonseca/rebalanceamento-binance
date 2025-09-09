@@ -1,3 +1,9 @@
+"""API endpoints for managing the application's configuration.
+
+This module provides the routes for viewing, updating, and testing the
+application's settings, including API keys and rebalancing strategies.
+It uses Pydantic models to ensure that no sensitive data is exposed.
+"""
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -20,16 +26,22 @@ router = APIRouter()
 
 
 class PublicBinanceSettings(BaseModel):
+    """A Pydantic model for publicly exposing Binance settings status."""
     api_key_set: bool
     secret_key_set: bool
 
 
 class PublicCMCSettings(BaseModel):
+    """A Pydantic model for publicly exposing CoinMarketCap settings status."""
     api_key_set: bool
 
 
 class PublicAppSettings(BaseModel):
-    """A version of AppSettings that is safe to return to the client."""
+    """A version of AppSettings that is safe to return to the client.
+
+    This model redacts all secret and encrypted fields, only indicating
+    whether they have been set or not.
+    """
 
     admin_user: str
     binance: PublicBinanceSettings
@@ -49,8 +61,17 @@ class PublicAppSettings(BaseModel):
 
 @router.get("/config", response_model=PublicAppSettings, tags=["Configuration"])
 async def get_public_config(settings: AppSettings = Depends(get_settings)):
-    """
-    Returns the current application configuration, excluding any sensitive data.
+    """Gets the current application configuration.
+
+    This endpoint returns the application settings in a "public" format,
+    meaning any sensitive fields like API keys are redacted. It only shows
+    whether keys have been set or not.
+
+    Args:
+        settings: The application settings, injected by FastAPI.
+
+    Returns:
+        A PublicAppSettings object with the safe-to-view configuration.
     """
     return PublicAppSettings(
         admin_user=settings.admin_user,
@@ -70,13 +91,23 @@ async def get_public_config(settings: AppSettings = Depends(get_settings)):
     )
 
 
-@router.post("/config", status_code=status.HTTP_204_NO_CONTENT, tags=["Configuration"])
+@router.post("/config", status_code=status.HTTP_2_4_NO_CONTENT, tags=["Configuration"])
 async def update_config(
     request: Request,
     config_manager: ConfigManager = Depends(get_config_manager),
 ):
-    """
-    Updates and saves the application configuration from form data.
+    """Updates and saves the application configuration.
+
+    This endpoint receives form data, parses it, updates the settings object,
+    and then saves it using the ConfigManager. It handles various data types,
+    including API keys, passwords, and the asset allocation dictionary.
+
+    Args:
+        request: The incoming FastAPI request, containing form data.
+        config_manager: The configuration manager, injected by FastAPI.
+
+    Raises:
+        HTTPException: If the provided allocations do not sum to 100.
     """
     form_data = await request.form()
     current_settings = config_manager.get_settings().copy(deep=True)
@@ -139,8 +170,19 @@ async def update_config(
 
 @router.post("/config/test-keys", tags=["Configuration"])
 async def test_api_keys(config_manager: ConfigManager = Depends(get_config_manager)):
-    """
-    Tests the configured API keys for Binance and CoinMarketCap.
+    """Tests the configured API keys for Binance and CoinMarketCap.
+
+    This endpoint attempts to connect to both services using the saved API
+    keys. It returns a summary of whether each connection was successful.
+
+    Args:
+        config_manager: The configuration manager, injected by FastAPI.
+
+    Returns:
+        A JSON response with the status of each service connection.
+
+    Raises:
+        HTTPException: If the connection tests fail or keys are not set.
     """
     settings = config_manager.get_settings()
 

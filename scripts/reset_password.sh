@@ -1,4 +1,15 @@
 #!/bin/bash
+#
+# Resets the admin password for the application.
+#
+# This script executes a Python one-liner inside the running Docker container
+# to safely update the password hash in the config.json file.
+#
+# It requires the Docker container to be running.
+#
+# Usage:
+#   ./scripts/reset_password.sh "your-new-secure-password"
+#
 set -e
 
 # --- Configuration ---
@@ -16,17 +27,17 @@ NEW_PASSWORD=$1
 # --- Main Script ---
 echo "Attempting to reset admin password for container '$CONTAINER_NAME'..."
 
-# 1. Check if the container is running
+# 1. Check if the container is running.
 if ! docker ps --filter "name=^/$CONTAINER_NAME$" --format "{{.Names}}" | grep -q "^$CONTAINER_NAME$"; then
     echo "Error: Container '$CONTAINER_NAME' is not running."
     echo "Please start the container with 'docker-compose up -d' before running this script."
     exit 1
 fi
 
-# 2. Execute the password reset script inside the container
+# 2. Execute the password reset command inside the container.
 echo "Container found. Executing password reset..."
 
-# This is a Python one-liner that will be executed inside the container.
+# This is a Python script that will be executed inside the container.
 # It reads the config, hashes the new password, updates the config, and saves it.
 docker exec "$CONTAINER_NAME" python -c "
 import json
