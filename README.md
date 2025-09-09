@@ -31,35 +31,48 @@ It provides a simple web interface for configuration, status monitoring, and man
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 
-### 1. Configuration
+### 1. Build and Run
 
-Before running the application, you need to set up your master encryption key.
+With Docker running, execute the following command in your terminal:
 
-Create a file named `.env` in the same directory as `docker-compose.yml`.
-
-If this is your first time running the bot, you can leave the key empty to have one generated for you:
-```env
-# .env file
-MASTER_KEY=
+```bash
+docker-compose up --build
 ```
-The bot will create a `data/secret.key` file. You should then copy the content of this file into the `MASTER_KEY` variable for future runs.
+This will build the Docker image and start the container. **On the first run, you should run it without the `-d` flag** so you can see the logs.
 
-If you already have a key, paste it here:
+### 2. Retrieve Your Master Key (First Run Only)
+
+The first time you start the application, it will generate a unique, secret `MASTER_KEY` for you. This key is used to encrypt your API credentials.
+
+Look for a message like this in the container logs:
+```
+================================================================================
+!!! NEW MASTER KEY GENERATED !!!
+...
+MASTER_KEY: your_super_secret_and_long_encryption_key_here
+================================================================================
+```
+
+**You must save this key.** For all future runs, you will need to provide it to the container.
+
+### 3. Configure the Master Key for Future Runs
+
+Stop the container (`Ctrl+C`).
+
+Now, you need to provide the `MASTER_KEY` to the application for all future runs. The recommended way is to use a `.env` file.
+
+Create a file named `.env` in the same directory as `docker-compose.yml` and add your key:
 ```env
 # .env file
 MASTER_KEY=your_super_secret_and_long_encryption_key_here
 ```
 
-### 2. Build and Run
-
-With Docker running, execute the following command in your terminal:
-
+Now you can run the container in detached mode:
 ```bash
-docker-compose up --build -d
+docker-compose up -d
 ```
-This will build the Docker image and start the container in detached mode.
 
-### 3. Access the UI
+### 4. Access the UI
 
 Once the container is running, open your web browser and navigate to:
 
