@@ -149,15 +149,16 @@ class ConfigManager:
         elif self.secret_key_path.exists():
             key = self.secret_key_path.read_bytes()
         else:
-            logger.warning(
-                f"MASTER_KEY not found. Generating a new key at {self.secret_key_path}."
-            )
-            logger.warning(
-                "You MUST back up this key and set it as the MASTER_KEY environment variable for future deployments."
-            )
             DATA_DIR.mkdir(exist_ok=True)
             key = Fernet.generate_key()
             self.secret_key_path.write_bytes(key)
+            logger.warning("=" * 80)
+            logger.warning("!!! NEW MASTER KEY GENERATED !!!")
+            logger.warning(f"A new master key has been generated and saved to: {self.secret_key_path}")
+            logger.warning("You MUST back up this key and set it as the MASTER_KEY environment variable.")
+            logger.warning("If you lose this key, you will lose access to your encrypted API keys.")
+            logger.warning(f"MASTER_KEY: {key.decode()}")
+            logger.warning("=" * 80)
 
         return Fernet(key)
 

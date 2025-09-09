@@ -1,29 +1,29 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - {{ super() }}{% endblock %}
+{% block title %}Painel - {{ super() }}{% endblock %}
 
 {% block content %}
 <div id="alert-placeholder"></div>
 
 <div class="card">
-    <h2>Control Panel</h2>
-    <p>Manually trigger a rebalancing run. The bot will use the currently saved configuration.</p>
+    <h2>Painel de Controle</h2>
+    <p>Acione manualmente uma execução de rebalanceamento. O bot usará a configuração salva atualmente.</p>
     <div class="form-actions">
-        <button id="run-rebalance-btn" class="button">Run Rebalance</button>
-        <button id="run-dry-run-btn" class="button secondary">Run Dry Run</button>
+        <button id="run-rebalance-btn" class="button">Executar Rebalanceamento</button>
+        <button id="run-dry-run-btn" class="button secondary">Executar Simulação</button>
     </div>
 </div>
 
 <div class="card">
-    <h2>Last Run Status</h2>
+    <h2>Status da Última Execução</h2>
     {% if last_run %}
-    <p><strong>Run ID:</strong> {{ last_run.run_id }}</p>
-    <p><strong>Timestamp:</strong> {{ last_run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
-    <p><strong>Status:</strong> <span class="status-{{ last_run.status.lower() }}">{{ last_run.status }}</span> {% if last_run.is_dry_run %}(Dry Run){% endif %}</p>
-    <p><strong>Summary:</strong> {{ last_run.summary_message }}</p>
+    <p><strong>ID da Execução:</strong> {{ last_run.run_id }}</p>
+    <p><strong>Data e Hora:</strong> {{ last_run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
+    <p><strong>Status:</strong> <span class="status-{{ last_run.status.lower() }}">{{ last_run.status }}</span> {% if last_run.is_dry_run %}(Simulação){% endif %}</p>
+    <p><strong>Resumo:</strong> {{ last_run.summary_message }}</p>
     {% if last_run.errors %}
     <div class="errors">
-        <strong>Errors:</strong>
+        <strong>Erros:</strong>
         <ul>
             {% for error in last_run.errors %}
             <li>{{ error }}</li>
@@ -32,21 +32,21 @@
     </div>
     {% endif %}
     {% else %}
-    <p>No rebalancing runs have been recorded yet.</p>
+    <p>Nenhuma execução de rebalanceamento foi registrada ainda.</p>
     {% endif %}
 </div>
 
 <div class="card">
-    <h2>Current Balances</h2>
-    <div id="balances-loading">Loading balances...</div>
+    <h2>Saldos Atuais</h2>
+    <div id="balances-loading">Carregando saldos...</div>
     <div id="balances-content" style="display:none;">
         <h3 id="total-balance-usd">$0.00</h3>
         <table>
             <thead>
                 <tr>
-                    <th>Asset</th>
-                    <th>Quantity</th>
-                    <th>Value (USD)</th>
+                    <th>Ativo</th>
+                    <th>Quantidade</th>
+                    <th>Valor (USD)</th>
                 </tr>
             </thead>
             <tbody id="balances-table-body">
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function runRebalance(isDryRun) {
         const btn = isDryRun ? dryRunBtn : runBtn;
-        btn.textContent = 'Running...';
+        btn.textContent = 'Executando...';
         btn.disabled = true;
         if (isDryRun) runBtn.disabled = true; else dryRunBtn.disabled = true;
 
@@ -87,16 +87,16 @@ document.addEventListener('DOMContentLoaded', function () {
             const result = await response.json();
 
             if (response.ok) {
-                createAlert(`Run ${result.status}: ${result.message}`, 'success');
+                createAlert(`Execução ${result.status}: ${result.message}`, 'success');
                 setTimeout(() => window.location.reload(), 2000);
             } else {
-                createAlert(`Failed to start run: ${result.detail || 'Unknown error'}`);
+                createAlert(`Falha ao iniciar a execução: ${result.detail || 'Erro desconhecido'}`);
             }
         } catch (error) {
-            createAlert(`An error occurred: ${error.message}`);
+            createAlert(`Ocorreu um erro: ${error.message}`);
         } finally {
-            runBtn.textContent = 'Run Rebalance';
-            dryRunBtn.textContent = 'Run Dry Run';
+            runBtn.textContent = 'Executar Rebalanceamento';
+            dryRunBtn.textContent = 'Executar Simulação';
             runBtn.disabled = false;
             dryRunBtn.disabled = false;
         }
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(data.error);
             }
 
-            totalBalanceEl.textContent = `$${data.total_value_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            totalBalanceEl.textContent = `$${data.total_value_usd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             tableBody.innerHTML = ''; // Clear existing rows
 
             const sortedAssets = Object.keys(data.balances).sort((a, b) => data.balances[b].value_usd - data.balances[a].value_usd);
@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 row.innerHTML = `
                     <td>${asset}</td>
                     <td>${balance.quantity}</td>
-                    <td>$${balance.value_usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td>$${balance.value_usd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 `;
                 tableBody.appendChild(row);
             }
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         } catch (error) {
             loadingDiv.style.display = 'none';
-            errorDiv.textContent = `Could not load balances: ${error.message}`;
+            errorDiv.textContent = `Não foi possível carregar os saldos: ${error.message}`;
             errorDiv.style.display = 'block';
         }
     }

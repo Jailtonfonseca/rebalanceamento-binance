@@ -1,19 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}History - {{ super() }}{% endblock %}
+{% block title %}Histórico - {{ super() }}{% endblock %}
 
 {% block content %}
-<h2>Rebalancing History</h2>
-<p>Showing the last 100 runs.</p>
+<h2>Histórico de Rebalanceamento</h2>
+<p>Mostrando as últimas 100 execuções.</p>
 
 <div class="card">
     <table>
         <thead>
             <tr>
-                <th>Timestamp (UTC)</th>
+                <th>Data e Hora (UTC)</th>
                 <th>Status</th>
-                <th>Mode</th>
-                <th>Summary</th>
+                <th>Modo</th>
+                <th>Resumo</th>
             </tr>
         </thead>
         <tbody>
@@ -25,16 +25,16 @@
                 </td>
                 <td>
                     {% if run.is_dry_run %}
-                    <span class="mode-dry">Dry Run</span>
+                    <span class="mode-dry">Simulação</span>
                     {% else %}
-                    <span class="mode-live">Live</span>
+                    <span class="mode-live">Real</span>
                     {% endif %}
                 </td>
                 <td>{{ run.summary_message }}</td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="4" style="text-align: center;">No history found.</td>
+                <td colspan="4" style="text-align: center;">Nenhum histórico encontrado.</td>
             </tr>
             {% endfor %}
         </tbody>
