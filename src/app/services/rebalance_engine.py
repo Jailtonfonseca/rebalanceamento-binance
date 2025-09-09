@@ -1,3 +1,9 @@
+"""The core engine for calculating portfolio rebalancing trades.
+
+This module provides the `RebalanceEngine`, a stateless class responsible for
+taking market data, current balances, and target allocations to produce a list
+of proposed trades needed to bring the portfolio back into alignment.
+"""
 from typing import Dict, List, Set
 
 import logging
@@ -8,9 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 class RebalanceEngine:
-    """
-    Contains the core logic for calculating rebalancing trades.
-    This class is stateless and performs no I/O.
+    """Contains the core logic for calculating rebalancing trades.
+
+    This class is stateless and performs no I/O. Its primary method, `run`,
+    is a pure function that calculates the necessary trades based on its inputs.
     """
 
     def run(
@@ -23,11 +30,28 @@ class RebalanceEngine:
         base_pair: str,
         min_trade_value_usd: float,
     ) -> List[ProposedTrade]:
-        """
-        Calculates the trades needed to match target allocations.
+        """Calculates the trades needed to match target allocations.
+
+        This method performs the following steps:
+        1. Filters assets to a list of eligible candidates.
+        2. Calculates the total portfolio value in the specified base pair.
+        3. Determines the difference (delta) between the current and target
+           allocation for each asset.
+        4. Proposes trades for deltas that exceed the minimum trade value.
+        5. Adjusts trade quantities to comply with exchange rules (e.g.,
+           step size) and filters out trades below the minimum notional value.
+
+        Args:
+            balances: A dictionary of current asset balances.
+            prices: A dictionary of current asset prices against the base pair.
+            exchange_info: A dictionary of exchange trading rules and filters.
+            target_allocations: A dictionary of target asset allocations.
+            eligible_cmc_symbols: A set of symbols that meet the CMC rank criteria.
+            base_pair: The base currency for trading (e.g., 'USDT').
+            min_trade_value_usd: The minimum value for a trade to be proposed.
 
         Returns:
-            A list of ProposedTrade objects representing the trades to be executed.
+            A list of ProposedTrade objects representing the trades to execute.
         """
         logger.info("Starting rebalance calculation engine...")
 

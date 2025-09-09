@@ -1,3 +1,10 @@
+"""The central orchestrator for the portfolio rebalancing process.
+
+This module defines the `RebalanceExecutor` class, which ties together all the
+services (configuration, exchange clients, database) to perform the full
+rebalancing flow. It ensures that rebalancing operations are executed
+atomically and logs the entire process.
+"""
 import asyncio
 import uuid
 import logging
@@ -16,9 +23,18 @@ logger = logging.getLogger(__name__)
 
 
 class RebalanceExecutor:
-    """
-    Orchestrates the entire rebalancing process, from data fetching to execution.
-    Ensures that only one rebalancing process can run at a time.
+    """Orchestrates the rebalancing process.
+
+    This class coordinates fetching data from various sources, running the
+    rebalancing logic to generate a trade plan, executing the plan, and
+    saving the results. It uses a lock to prevent concurrent rebalancing runs.
+
+    Attributes:
+        config: The application settings.
+        binance_client: The client for interacting with the Binance API.
+        cmc_client: The client for interacting with the CoinMarketCap API.
+        engine: The engine that calculates the rebalancing trades.
+        db: The SQLAlchemy database session.
     """
 
     _lock = asyncio.Lock()
@@ -31,6 +47,15 @@ class RebalanceExecutor:
         rebalance_engine: RebalanceEngine,
         db_session: Session,
     ):
+        """Initializes the RebalanceExecutor.
+
+        Args:
+            config_manager: The application's configuration manager.
+            binance_client: An initialized Binance API client.
+            cmc_client: An initialized CoinMarketCap API client.
+            rebalance_engine: An initialized rebalancing engine.
+            db_session: An active SQLAlchemy database session.
+        """
         self.config = config_manager.get_settings()
         self.binance_client = binance_client
         self.cmc_client = cmc_client
@@ -40,8 +65,25 @@ class RebalanceExecutor:
     async def execute_rebalance_flow(
         self, dry_run_override: bool = None
     ) -> RebalanceResult:
-        """
-        Executes the full rebalancing flow: fetch, calculate, execute, and save.
+        """Executes the full rebalancing flow.
+
+        This method orchestrates the entire process:
+        1. Fetches market data and account balances.
+        2. Runs the rebalancing engine to calculate a trade plan.
+        3. Executes or simulates the trades based on the plan.
+        4. Saves the results of the run to the database.
+
+        A lock prevents this method from running concurrently.
+
+        Args:
+            dry_run_override: If specified, this value overrides the dry_run
+                              setting from the configuration.
+
+        Returns:
+            A RebalanceResult object summarizing the outcome of the run.
+
+        Raises:
+            RuntimeError: If a rebalancing process is already in progress.
         """
         if self._lock.locked():
             logger.warning("A rebalancing process is already running.")
@@ -117,7 +159,20 @@ class RebalanceExecutor:
     async def _execute_plan(
         self, trades: List[ProposedTrade], run_id: str, is_dry_run: bool
     ) -> RebalanceResult:
-        """Executes or simulates a list of trades."""
+        """Executes or simulates a list of proposed trades.
+
+        Sells are processed before buys to free up capital. If `is_dry_run` is
+        True, trades are only logged. Otherwise, they are executed via the
+        Binance client.
+
+        Args:
+            trades: A list of ProposedTrade objects to execute.
+            run_id: The unique ID for the current rebalancing run.
+            is_dry_run: A boolean indicating whether to execute real trades.
+
+        Returns:
+            A RebalanceResult object detailing the executed trades and any errors.
+        """
         executed_trades: List[ProposedTrade] = []
         errors: List[str] = []
 
@@ -170,7 +225,12 @@ class RebalanceExecutor:
         )
 
     def _save_result(self, result: RebalanceResult, is_dry_run: bool):
-        """Saves the result of a rebalancing run to the database."""
+        """Saves the result of a rebalancing run to the database.
+
+        Args:
+            result: The RebalanceResult object from the execution.
+            is_dry_run: A boolean indicating if the run was a simulation.
+        """
         db_run = RebalanceRun(
             run_id=result.run_id,
             timestamp=result.timestamp,

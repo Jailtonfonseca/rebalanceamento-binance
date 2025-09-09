@@ -1,3 +1,10 @@
+"""Manages application configuration, including sensitive data encryption.
+
+This module provides a robust configuration management system using Pydantic
+for validation and Fernet for encryption. It handles loading settings from a
+JSON file, encrypting and decrypting API keys, managing a master encryption key,
+and providing a singleton instance of the configuration for the application.
+"""
 import os
 import json
 from pathlib import Path
@@ -19,6 +26,14 @@ SECRET_KEY_FILE = DATA_DIR / "secret.key"
 
 
 class BinanceSettings(BaseModel):
+    """Pydantic model for Binance API settings.
+
+    Attributes:
+        api_key: The plaintext Binance API key (used for input, not saved).
+        secret_key: The plaintext Binance secret key (used for input, not saved).
+        api_key_encrypted: The encrypted Binance API key.
+        secret_key_encrypted: The encrypted Binance secret key.
+    """
     api_key: str = ""
     secret_key: str = ""
     # These will hold the encrypted values
@@ -27,11 +42,22 @@ class BinanceSettings(BaseModel):
 
 
 class CMCSettings(BaseModel):
+    """Pydantic model for CoinMarketCap API settings.
+
+    Attributes:
+        api_key: The plaintext CMC API key (used for input, not saved).
+        api_key_encrypted: The encrypted CMC API key.
+    """
     api_key: str = ""
     api_key_encrypted: Optional[bytes] = None
 
 
 class AppSettings(BaseModel):
+    """The main Pydantic model for all application settings.
+
+    This model aggregates all other settings models and defines the structure
+    of the main `config.json` file. It includes validation rules.
+    """
     admin_user: str = Field("admin", description="Username for the web UI.")
     password_hash: Optional[bytes] = Field(
         None, description="Hashed password for the admin user."
@@ -71,6 +97,7 @@ class AppSettings(BaseModel):
     @field_validator("allocations")
     @classmethod
     def allocations_must_sum_to_100(cls, v: Dict[str, float]) -> Dict[str, float]:
+        """Validates that the allocation percentages sum to 100."""
         if round(sum(v.values())) != 100:
             raise ValueError("Allocation percentages must sum to 100.")
         return v
@@ -80,16 +107,42 @@ class AppSettings(BaseModel):
 
 
 class ConfigManager:
+    """Handles loading, saving, and encrypting application settings.
+
+    This class is responsible for all interactions with the configuration file
+    and the master encryption key. It uses Fernet for symmetric encryption of
+    sensitive data like API keys. It is designed to be used as a singleton.
+
+    Attributes:
+        config_path: The path to the JSON configuration file.
+        secret_key_path: The path to the file storing the Fernet key.
+        fernet: The Fernet instance used for encryption/decryption.
+        settings: The Pydantic model instance holding the current settings.
+    """
     def __init__(
         self, config_path: Path = CONFIG_FILE, secret_key_path: Path = SECRET_KEY_FILE
     ):
+        """Initializes the ConfigManager.
+
+        Args:
+            config_path: The path to the configuration file.
+            secret_key_path: The path to the secret key file.
+        """
         self.config_path = config_path
         self.secret_key_path = secret_key_path
         self.fernet = self._get_fernet()
         self.settings = self._load_settings()
 
     def _get_fernet(self) -> Fernet:
-        """Initializes Fernet using MASTER_KEY from env or a local file."""
+        """Initializes Fernet using the master key.
+
+        The key is sourced from the MASTER_KEY environment variable first.
+        If not found, it tries to read from the secret key file. If that file
+        doesn't exist, a new key is generated and saved.
+
+        Returns:
+            An initialized Fernet instance.
+        """
         master_key = os.getenv("MASTER_KEY")
         if master_key:
             key = master_key.encode()
@@ -109,7 +162,15 @@ class ConfigManager:
         return Fernet(key)
 
     def _load_settings(self) -> AppSettings:
-        """Loads settings from the JSON file, creating a default if it doesn't exist."""
+        """Loads settings from the JSON file.
+
+        If the file doesn't exist, it creates a default configuration with a
+        default 'admin' user and password. It also handles potential errors
+        during file parsing and validation, falling back to default settings.
+
+        Returns:
+            An instance of AppSettings with the loaded configuration.
+        """
         if not self.config_path.exists():
             logger.info(
                 f"Config file not found at {self.config_path}. Creating a default one."
@@ -154,7 +215,16 @@ class ConfigManager:
             return AppSettings()
 
     def save_settings(self, settings: AppSettings):
-        """Encrypts sensitive fields and saves the settings model to a JSON file."""
+        """Encrypts sensitive fields and saves the settings to the JSON file.
+
+        Before saving, this method checks for any plaintext API keys provided
+        in the settings model, encrypts them, and clears the plaintext versions.
+        It then serializes the settings to JSON, handling byte encoding,
+        and updates the in-memory settings.
+
+        Args:
+            settings: The AppSettings object to save.
+        """
         # Encrypt API keys if they are provided
         if settings.binance.api_key:
             settings.binance.api_key_encrypted = self.encrypt(settings.binance.api_key)
@@ -196,15 +266,35 @@ class ConfigManager:
         self.settings = settings
 
     def get_settings(self) -> AppSettings:
-        """Returns the current application settings."""
+        """Returns the current, in-memory application settings.
+
+        Returns:
+            The current AppSettings instance.
+        """
         return self.settings
 
     def encrypt(self, plain_text: str) -> bytes:
-        """Encrypts a string."""
+        """Encrypts a string using the Fernet instance.
+
+        Args:
+            plain_text: The string to encrypt.
+
+        Returns:
+            The encrypted ciphertext as bytes.
+        """
         return self.fernet.encrypt(plain_text.encode())
 
     def decrypt(self, cipher_text: bytes) -> str:
-        """Decrypts a byte string."""
+        """Decrypts a byte string using the Fernet instance.
+
+        Handles cases where decryption fails (e.g., wrong key) gracefully.
+
+        Args:
+            cipher_text: The encrypted bytes to decrypt.
+
+        Returns:
+            The decrypted plaintext string, or an empty string if decryption fails.
+        """
         if not cipher_text:
             return ""
         try:
@@ -223,8 +313,16 @@ config_manager = ConfigManager()
 
 
 def get_config_manager() -> ConfigManager:
+    """Returns the singleton instance of the ConfigManager.
+
+    This function is intended for use as a FastAPI dependency.
+    """
     return config_manager
 
 
 def get_settings() -> AppSettings:
+    """Returns the settings from the singleton ConfigManager instance.
+
+    This function is intended for use as a FastAPI dependency.
+    """
     return config_manager.get_settings()

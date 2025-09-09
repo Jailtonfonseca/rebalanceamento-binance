@@ -7,7 +7,7 @@ It provides a simple web interface for configuration, status monitoring, and man
 ## Features
 
 - **Web UI**: Easy-to-use interface for all configuration, served directly from the container.
-- **Flexible Strategies**: Rebalance periodically (e.g., every 24 hours) or based on a deviation threshold.
+- **Flexible Strategies**: Rebalance periodically (e.g., every 24 hours) or when portfolio allocations drift past a configurable threshold.
 - **Dry Run Mode**: Simulate rebalancing runs without executing any real trades to see the plan first.
 - **Binance Integration**: Connects to your Binance account to read balances, get prices, and execute market orders.
 - **CoinMarketCap Integration**: Filters your portfolio against top-ranked assets to avoid rebalancing low-quality or delisted coins.
@@ -103,14 +103,14 @@ The application provides automatic API documentation via Swagger UI and ReDoc. O
 
 ## Helper Scripts
 
-The `scripts/` directory contains helper scripts for administrative tasks. They should be run from the root of the project.
+The `scripts/` directory contains helper scripts for administrative tasks. They must be run from the root of the project directory.
 
-- **`backup_db.sh`**: Creates a compressed, timestamped backup of your database file (`data/rebalancer.db`) and stores it in the `data/backups` directory.
+- **`backup_db.sh`**: Creates a compressed, timestamped backup of your database file (`data/rebalancer.db`) and stores it in the `data/backups` directory. It also automatically prunes old backups, keeping the last 10.
   ```bash
   ./scripts/backup_db.sh
   ```
 
-- **`reset_password.sh`**: Resets the admin password. This is useful if you get locked out. It must be run while the container is running.
+- **`reset_password.sh`**: Resets the admin password if you get locked out. This script must be run while the Docker container is running.
   ```bash
-  ./scripts/reset_password.sh your_new_secure_password
+  ./scripts/reset_password.sh "your-new-secure-password"
   ```

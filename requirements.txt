@@ -13,3 +13,5 @@ ruff
 black
 mypy
 prometheus-fastapi-instrumentator
+pytest
+trio
