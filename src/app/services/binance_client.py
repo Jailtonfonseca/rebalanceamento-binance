@@ -199,8 +199,15 @@ class BinanceClient:
         if self._exchange_info_cache:
             return self._exchange_info_cache
 
-        params = {"symbols": json.dumps(symbols)} if symbols else {}
-        info = await self._send_request("GET", "/api/v3/exchangeInfo", params=params)
+        endpoint = "/api/v3/exchangeInfo"
+        params = {}
+        if symbols:
+            # Binance expects a JSON array string for the 'symbols' parameter.
+            # httpx's 'params' would URL-encode the characters `[]"` which
+            # Binance rejects. So, we add it to the params dict as is.
+            params = {"symbols": json.dumps(symbols)}
+
+        info = await self._send_request("GET", endpoint, params=params)
 
         # Cache the result by symbol for easy lookup
         self._exchange_info_cache = {item["symbol"]: item for item in info["symbols"]}
