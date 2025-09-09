@@ -161,6 +161,11 @@ class RebalanceEngine:
         projected_balances = balances.copy()
         total_fees_usd = sum(trade.fee_cost_usd for trade in proposed_trades)
 
+        # Ensure the base_pair key exists before we start modifying it,
+        # in case the initial balance for it was zero.
+        if base_pair not in projected_balances:
+            projected_balances[base_pair] = 0.0
+
         for trade in proposed_trades:
             asset_qty_change = trade.quantity
             base_qty_change = trade.estimated_value_usd
