@@ -93,6 +93,9 @@ class AppSettings(BaseModel):
     min_trade_value_usd: float = Field(
         10.0, ge=10.0, description="Minimum value in USD for a trade to be executed."
     )
+    trade_fee_pct: float = Field(
+        0.1, ge=0, le=5, description="The trading fee percentage."
+    )
 
     @field_validator("allocations")
     @classmethod

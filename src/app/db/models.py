@@ -102,6 +102,8 @@ class RebalanceRun(Base):
     # Store the list of trades and errors as JSON strings
     trades_executed = Column(Json, nullable=True)
     errors = Column(Json, nullable=True)
+    projected_balances = Column(Json, nullable=True)
+    total_fees_usd = Column(Float, nullable=True)
 
 
 # --- DB Initialization ---

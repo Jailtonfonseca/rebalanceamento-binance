@@ -49,6 +49,7 @@ def mock_config_manager():
         max_cmc_rank=100,
         dry_run=True,
         min_trade_value_usd=10.0,
+        trade_fee_pct=0.1,
     )
 
     class MockConfigManager(ConfigManager):
@@ -120,11 +121,27 @@ async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_m
 
     assert sell_trade is not None
     assert sell_trade.asset == "BTC"
-    assert sell_trade.estimated_value_usd == pytest.approx(12000)
+    # With the new logic, rebalancing is based on the eligible asset value ($90k), not total portfolio value ($100k)
+    # Target values: BTC=54k, ETH=36k. Current: BTC=72k, ETH=18k.
+    # Deltas: Sell 18k BTC, Buy 18k ETH.
+    assert sell_trade.estimated_value_usd == pytest.approx(18000)
+    assert sell_trade.fee_cost_usd == pytest.approx(18.0)
 
     assert buy_trade is not None
     assert buy_trade.asset == "ETH"
-    assert buy_trade.estimated_value_usd == pytest.approx(22000, rel=1e-4)
+    assert buy_trade.estimated_value_usd == pytest.approx(18000)
+    assert buy_trade.fee_cost_usd == pytest.approx(18.0)
+
+    # Assert totals and projected balances
+    assert result.total_fees_usd == pytest.approx(36.0)
+    assert result.projected_balances is not None
+    # Initial: 1.2 BTC. Sell 18k/60k = 0.3 BTC. Final: 0.9 BTC
+    assert result.projected_balances["BTC"]["quantity"] == pytest.approx(0.9)
+    # Initial: 6 ETH. Buy 18k/3k = 6 ETH. After fee: 6 * (1-0.001) = 5.994. Final: 11.994 ETH
+    assert result.projected_balances["ETH"]["quantity"] == pytest.approx(11.994)
+    # Initial: 10k USDT. Buy 18k ETH -> -18k. Sell 18k BTC -> +18k*(1-0.001)=17982. Final: 9982
+    assert result.projected_balances["USDT"]["quantity"] == pytest.approx(9982)
+
 
     # Assert database write
     db_run = db_session.query(RebalanceRun).filter_by(run_id=result.run_id).first()
@@ -133,3 +150,5 @@ async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_m
     assert db_run.is_dry_run is True
     assert len(db_run.trades_executed) == 2
     assert db_run.trades_executed[0]["asset"] == "BTC"
+    assert db_run.total_fees_usd == pytest.approx(36.0)
+    assert db_run.projected_balances["BTC"]["quantity"] == pytest.approx(0.9)

@@ -21,6 +21,32 @@
     <p><strong>Data e Hora:</strong> {{ last_run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
     <p><strong>Status:</strong> <span class="status-{{ last_run.status.lower() }}">{{ last_run.status }}</span> {% if last_run.is_dry_run %}(Simulação){% endif %}</p>
     <p><strong>Resumo:</strong> {{ last_run.summary_message }}</p>
+    {% if last_run.total_fees_usd is not none %}
+    <p><strong>Custo Total de Taxas (Estimado):</strong> ${{ "%.2f"|format(last_run.total_fees_usd) }}</p>
+    {% endif %}
+
+    {% if last_run.projected_balances %}
+    <h4>Saldos Projetados Após a Execução</h4>
+    <table>
+        <thead>
+            <tr>
+                <th>Ativo</th>
+                <th>Nova Quantidade</th>
+                <th>Novo Valor (USD)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for asset, details in last_run.projected_balances.items()|sort(attribute='1.value_usd', reverse=true) %}
+            <tr>
+                <td>{{ asset }}</td>
+                <td>{{ "%.8f"|format(details.quantity|float) }}</td>
+                <td>${{ "%.2f"|format(details.value_usd|float) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
     {% if last_run.errors %}
     <div class="errors">
         <strong>Erros:</strong>

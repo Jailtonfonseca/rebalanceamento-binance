@@ -6,39 +6,85 @@
 <h2>Histórico de Rebalanceamento</h2>
 <p>Mostrando as últimas 100 execuções.</p>
 
-<div class="card">
-    <table>
-        <thead>
-            <tr>
-                <th>Data e Hora (UTC)</th>
-                <th>Status</th>
-                <th>Modo</th>
-                <th>Resumo</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for run in history %}
-            <tr>
-                <td>{{ run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-                <td>
-                    <span class="status-{{ run.status.lower() }}">{{ run.status }}</span>
-                </td>
-                <td>
-                    {% if run.is_dry_run %}
-                    <span class="mode-dry">Simulação</span>
-                    {% else %}
-                    <span class="mode-live">Real</span>
-                    {% endif %}
-                </td>
-                <td>{{ run.summary_message }}</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="4" style="text-align: center;">Nenhum histórico encontrado.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="history-list">
+    {% for run in history %}
+    <div class="card history-card">
+        <div class="history-summary" onclick="toggleDetails('details-{{ run.id }}')">
+            <div class="summary-item"><strong>Data:</strong><br>{{ run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</div>
+            <div class="summary-item"><strong>Status:</strong><br><span class="status-{{ run.status.lower() }}">{{ run.status }}</span></div>
+            <div class="summary-item"><strong>Modo:</strong><br>
+                {% if run.is_dry_run %}<span class="mode-dry">Simulação</span>
+                {% else %}<span class="mode-live">Real</span>{% endif %}
+            </div>
+            <div class="summary-item summary-message"><strong>Resumo:</strong><br>{{ run.summary_message }}</div>
+            <div class="summary-item toggle-icon">▼</div>
+        </div>
+        <div id="details-{{ run.id }}" class="history-details" style="display: none;">
+            <p><strong>ID da Execução:</strong> {{ run.run_id }}</p>
+            {% if run.errors %}
+            <div class="errors">
+                <strong>Erros:</strong>
+                <ul>
+                    {% for error in run.errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if run.trades_executed %}
+            <h4>Transações Executadas</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ativo</th>
+                        <th>Ação</th>
+                        <th>Quantidade</th>
+                        <th>Valor (USD)</th>
+                        <th>Taxa (USD)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trade in run.trades_executed %}
+                    <tr>
+                        <td>{{ trade.asset }}</td>
+                        <td>{{ trade.side }}</td>
+                        <td>{{ "%.8f"|format(trade.quantity|float) }}</td>
+                        <td>${{ "%.2f"|format(trade.estimated_value_usd|float) }}</td>
+                        <td>${{ "%.4f"|format(trade.fee_cost_usd|float) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+
+            {% if run.projected_balances %}
+            <div class="details-section">
+                <h4>Saldos Projetados</h4>
+                <p><strong>Custo Total de Taxas (Estimado):</strong> ${{ "%.2f"|format(run.total_fees_usd|float) }}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ativo</th>
+                            <th>Nova Quantidade</th>
+                            <th>Novo Valor (USD)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asset, details in run.projected_balances.items()|sort(attribute='1.value_usd', reverse=true) %}
+                        <tr>
+                            <td>{{ asset }}</td>
+                            <td>{{ "%.8f"|format(details.quantity|float) }}</td>
+                            <td>${{ "%.2f"|format(details.value_usd|float) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="card"><p>Nenhum histórico encontrado.</p></div>
+    {% endfor %}
 </div>
 
 <style>
@@ -47,6 +93,39 @@
     .status-failed { color: var(--danger-color); font-weight: bold; }
     .mode-dry { color: var(--secondary-color); }
     .mode-live { color: var(--primary-color); font-weight: bold; }
+    .history-card { margin-bottom: 1rem; }
+    .history-summary {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr 1fr 3fr auto;
+        gap: 1rem;
+        padding: 1rem;
+        cursor: pointer;
+        align-items: center;
+    }
+    .history-summary:hover { background-color: #f9f9f9; }
+    .summary-message { font-style: italic; color: #555; }
+    .toggle-icon { font-size: 1.2rem; transition: transform 0.2s; }
+    .history-details {
+        padding: 0 1rem 1rem 1rem;
+        border-top: 1px solid #eee;
+    }
+    .details-section { margin-top: 1rem; }
 </style>
+
+{% block scripts %}
+<script>
+    function toggleDetails(detailsId) {
+        const detailsDiv = document.getElementById(detailsId);
+        const icon = detailsDiv.previousElementSibling.querySelector('.toggle-icon');
+        if (detailsDiv.style.display === 'none') {
+            detailsDiv.style.display = 'block';
+            icon.style.transform = 'rotate(180deg)';
+        } else {
+            detailsDiv.style.display = 'none';
+            icon.style.transform = 'rotate(0deg)';
+        }
+    }
+</script>
+{% endblock %}
 
 {% endblock %}
