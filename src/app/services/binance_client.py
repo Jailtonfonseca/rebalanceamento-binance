@@ -124,9 +124,13 @@ class BinanceClient:
 
         async with httpx.AsyncClient() as client:
             try:
-                response = await client.request(
-                    method, url, params=params, headers=headers
-                )
+                request_kwargs = {"headers": headers}
+                if method.upper() in ("POST", "PUT", "DELETE"):
+                    request_kwargs["data"] = params
+                else:
+                    request_kwargs["params"] = params
+
+                response = await client.request(method, url, **request_kwargs)
                 response.raise_for_status()
                 return response.json()
             except httpx.HTTPStatusError as e:
