@@ -87,7 +87,7 @@ class RebalanceExecutor:
         """
         if self._lock.locked():
             logger.warning("A rebalancing process is already running.")
-            raise RuntimeError("Rebalancing process already in progress.")
+            raise RuntimeError("Processo de rebalanceamento já está em andamento.")
 
         async with self._lock:
             run_id = str(uuid.uuid4())
@@ -128,7 +128,7 @@ class RebalanceExecutor:
                 )
 
                 if not proposed_trades:
-                    message = "Portfolio is already balanced. No trades needed."
+                    message = "O portfólio já está balanceado. Nenhuma transação necessária."
                     result = RebalanceResult(
                         run_id=run_id, status="SUCCESS", message=message, trades=[]
                     )
@@ -200,21 +200,19 @@ class RebalanceExecutor:
                 executed_trades.append(trade)
 
             except Exception as e:
-                error_msg = f"Failed to execute {trade.side} {trade.symbol}: {e}"
+                error_msg = f"Falha ao executar {trade.side} {trade.symbol}: {e}"
                 logger.error(error_msg, exc_info=True)
                 errors.append(error_msg)
 
         # Determine final status
         status = "DRY_RUN" if is_dry_run else "SUCCESS"
-        message = f"Dry run complete. {len(executed_trades)} trades simulated."
+        message = f"Simulação concluída. {len(executed_trades)} transações simuladas."
         if not is_dry_run:
             if errors:
                 status = "PARTIAL_SUCCESS"
-                message = f"Rebalance partially completed with {len(errors)} errors."
+                message = f"Rebalanceamento parcialmente concluído com {len(errors)} erros."
             else:
-                message = (
-                    f"Rebalance successful. {len(executed_trades)} trades executed."
-                )
+                message = f"Rebalanceamento concluído com sucesso. {len(executed_trades)} transações executadas."
 
         return RebalanceResult(
             run_id=run_id,

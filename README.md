@@ -1,5 +1,7 @@
 # Crypto Portfolio Rebalancing Bot
 
+![Crypto Rebalancing Bot Dashboard](path/to/your/image.png)
+
 This repository contains a fully-featured, containerized bot to automatically rebalance your cryptocurrency portfolio on Binance based on target allocations and market data from CoinMarketCap.
 
 It provides a simple web interface for configuration, status monitoring, and manual control.

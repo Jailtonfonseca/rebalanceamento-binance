@@ -34,7 +34,7 @@ async def get_current_balances(
     secret_key = config_manager.decrypt(settings.binance.secret_key_encrypted)
 
     if not api_key or not secret_key:
-        return {"error": "Binance API keys are not configured."}
+        return {"error": "As chaves de API da Binance não estão configuradas."}
 
     try:
         client = BinanceClient(api_key=api_key, secret_key=secret_key)
@@ -64,6 +64,6 @@ async def get_current_balances(
         }
 
     except InvalidAPIKeys as e:
-        return {"error": f"Invalid Binance API Keys: {e.message}"}
+        return {"error": f"Chaves de API da Binance inválidas: {e.message}"}
     except Exception as e:
-        return {"error": f"An error occurred: {e}"}
+        return {"error": f"Ocorreu um erro: {e}"}

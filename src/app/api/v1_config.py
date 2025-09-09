@@ -91,7 +91,7 @@ async def get_public_config(settings: AppSettings = Depends(get_settings)):
     )
 
 
-@router.post("/config", status_code=status.HTTP_2_4_NO_CONTENT, tags=["Configuration"])
+@router.post("/config", status_code=status.HTTP_204_NO_CONTENT, tags=["Configuration"])
 async def update_config(
     request: Request,
     config_manager: ConfigManager = Depends(get_config_manager),

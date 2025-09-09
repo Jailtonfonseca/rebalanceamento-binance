@@ -52,7 +52,7 @@ async def run_rebalance_manually(
 
     if not all([binance_api_key, binance_secret_key, cmc_api_key]):
         raise HTTPException(
-            status_code=400, detail="API keys are not fully configured."
+            status_code=400, detail="As chaves de API não estão totalmente configuradas."
         )
 
     # Initialize all services needed for the flow
@@ -79,5 +79,5 @@ async def run_rebalance_manually(
     except Exception as e:
         # Catch other potential errors during setup
         raise HTTPException(
-            status_code=500, detail=f"An unexpected error occurred: {e}"
+            status_code=500, detail=f"Ocorreu um erro inesperado: {e}"
         )
