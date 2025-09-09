@@ -61,7 +61,7 @@ def mock_config_manager():
     return MockConfigManager()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_manager):
     """
     Tests the full rebalancing flow by calling the endpoint function directly.
