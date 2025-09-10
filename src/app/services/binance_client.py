@@ -119,17 +119,20 @@ class BinanceClient:
 
         async with httpx.AsyncClient() as client:
             try:
+                # Create a copy to avoid modifying the original dict, which is crucial for retry logic.
+                params_to_send = (params or {}).copy()
+
                 # Signature and timestamp must be generated for each attempt
                 if signed:
-                    params["recvWindow"] = 10000
-                    params["timestamp"] = int(time.time() * 1000)
-                    params["signature"] = self._generate_signature(params)
+                    params_to_send["recvWindow"] = 10000
+                    params_to_send["timestamp"] = int(time.time() * 1000)
+                    params_to_send["signature"] = self._generate_signature(params_to_send)
 
                 request_kwargs = {"headers": headers}
                 if method.upper() in ("POST", "PUT", "DELETE"):
-                    request_kwargs["data"] = params
+                    request_kwargs["data"] = params_to_send
                 else:
-                    request_kwargs["params"] = params
+                    request_kwargs["params"] = params_to_send
 
                 response = await client.request(method, url, **request_kwargs)
                 response.raise_for_status()
