@@ -22,6 +22,14 @@ DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
 CONFIG_FILE = DATA_DIR / "config.json"
 SECRET_KEY_FILE = DATA_DIR / "secret.key"
 
+# --- Custom Exceptions ---
+
+
+class DecryptionError(Exception):
+    """Raised when data decryption fails, likely due to an incorrect master key."""
+    pass
+
+
 # --- Pydantic Models for Configuration ---
 
 
@@ -303,12 +311,14 @@ class ConfigManager:
             return ""
         try:
             return self.fernet.decrypt(cipher_text).decode()
-        except InvalidToken:
+        except InvalidToken as e:
             logger.error(
                 "Failed to decrypt data. The MASTER_KEY may have changed.",
                 exc_info=True,
             )
-            return ""
+            raise DecryptionError(
+                "Failed to decrypt data. The MASTER_KEY may be incorrect or missing."
+            ) from e
 
 
 # --- Singleton Instance ---

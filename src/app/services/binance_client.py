@@ -142,9 +142,11 @@ class BinanceClient:
                 error_data = e.response.json()
                 error_code = error_data.get("code", -1)
                 error_msg = error_data.get("msg", "An unknown error occurred.")
-                if error_code == -2014:
+
+                # -2014: Invalid API key format. -2015: Invalid API key, IP, or permissions. -1022: Signature mismatch.
+                if error_code in [-2014, -2015, -1022]:
                     raise InvalidAPIKeys(
-                        f"Invalid API keys provided. {error_msg}", error_code
+                        f"API Key validation failed: {error_msg}", error_code
                     ) from e
                 raise BinanceException(error_msg, error_code) from e
 
@@ -161,15 +163,9 @@ class BinanceClient:
             InvalidAPIKeys: If the API keys are invalid or lack permissions.
             BinanceException: For other API or connection errors.
         """
-        try:
-            return await self._send_request("GET", "/api/v3/account", signed=True)
-        except BinanceException as e:
-            # Re-raise with a more specific message if it's likely a key issue
-            if e.code in [-2014, -2015, -1022]:
-                raise InvalidAPIKeys(
-                    f"API Key validation failed: {e.message}", e.code
-                ) from e
-            raise
+        # The specific error handling is now centralized in _send_request.
+        # We just need to call the endpoint.
+        return await self._send_request("GET", "/api/v3/account", signed=True)
 
     async def get_account_balances(self) -> Dict[str, float]:
         """Fetches all non-zero asset balances for the account.
