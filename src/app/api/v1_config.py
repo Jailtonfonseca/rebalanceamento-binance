@@ -12,6 +12,7 @@ import bcrypt
 from app.services.config_manager import (
     AppSettings,
     ConfigManager,
+    DecryptionError,
     get_config_manager,
     get_settings,
 )
@@ -184,51 +185,69 @@ async def test_api_keys(config_manager: ConfigManager = Depends(get_config_manag
     Raises:
         HTTPException: If the connection tests fail or keys are not set.
     """
-    settings = config_manager.get_settings()
-
-    # Decrypt keys for testing
-    binance_api_key = config_manager.decrypt(settings.binance.api_key_encrypted)
-    binance_secret_key = config_manager.decrypt(settings.binance.secret_key_encrypted)
-    cmc_api_key = config_manager.decrypt(settings.cmc.api_key_encrypted)
-
-    if not all([binance_api_key, binance_secret_key]):
-        raise HTTPException(
-            status_code=400,
-            detail={"service": "Binance", "error": "API Key or Secret is not set."},
-        )
-
-    if not cmc_api_key:
-        raise HTTPException(
-            status_code=400,
-            detail={"service": "CoinMarketCap", "error": "API Key is not set."},
-        )
-
-    binance_client = BinanceClient(
-        api_key=binance_api_key, secret_key=binance_secret_key
-    )
-    cmc_client = CoinMarketCapClient(api_key=cmc_api_key)
-
-    results = {}
     try:
-        await binance_client.test_connectivity()
-        results["binance"] = {
-            "status": "success",
-            "message": "Successfully connected and fetched account info.",
-        }
-    except Exception as e:
-        results["binance"] = {"status": "error", "message": str(e)}
+        settings = config_manager.get_settings()
 
-    try:
-        await cmc_client.test_connectivity()
-        results["cmc"] = {
-            "status": "success",
-            "message": "Successfully connected and fetched key info.",
-        }
-    except Exception as e:
-        results["cmc"] = {"status": "error", "message": str(e)}
+        # Decrypt keys for testing
+        binance_api_key = config_manager.decrypt(settings.binance.api_key_encrypted)
+        binance_secret_key = config_manager.decrypt(
+            settings.binance.secret_key_encrypted
+        )
+        cmc_api_key = config_manager.decrypt(settings.cmc.api_key_encrypted)
 
-    # Determine overall status
-    if all(r["status"] == "success" for r in results.values()):
-        return JSONResponse(content=results)
-    else:
-        raise HTTPException(status_code=400, detail=results)
+        if not all([binance_api_key, binance_secret_key]):
+            raise HTTPException(
+                status_code=400,
+                detail={"service": "Binance", "error": "API Key or Secret is not set."},
+            )
+
+        if not cmc_api_key:
+            raise HTTPException(
+                status_code=400,
+                detail={"service": "CoinMarketCap", "error": "API Key is not set."},
+            )
+
+        binance_client = BinanceClient(
+            api_key=binance_api_key, secret_key=binance_secret_key
+        )
+        cmc_client = CoinMarketCapClient(api_key=cmc_api_key)
+
+        results = {}
+        try:
+            await binance_client.test_connectivity()
+            results["binance"] = {
+                "status": "success",
+                "message": "Successfully connected and fetched account info.",
+            }
+        except Exception as e:
+            results["binance"] = {"status": "error", "message": str(e)}
+
+        try:
+            await cmc_client.test_connectivity()
+            results["cmc"] = {
+                "status": "success",
+                "message": "Successfully connected and fetched key info.",
+            }
+        except Exception as e:
+            results["cmc"] = {"status": "error", "message": str(e)}
+
+        # Determine overall status
+        if all(r["status"] == "success" for r in results.values()):
+            return JSONResponse(content=results)
+        else:
+            raise HTTPException(status_code=400, detail=results)
+
+    except DecryptionError:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "binance": {
+                    "status": "error",
+                    "message": "Could not decrypt API keys. The master encryption key may be missing or incorrect. Please re-enter your API keys in the configuration and save.",
+                },
+                "cmc": {
+                    "status": "error",
+                    "message": "Could not decrypt API keys. The master encryption key may be missing or incorrect. Please re-enter your API keys in the configuration and save.",
+                },
+            },
+        )
