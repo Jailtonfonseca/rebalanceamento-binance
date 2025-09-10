@@ -115,15 +115,16 @@ class BinanceClient:
         """
         params = params or {}
         headers = {"X-MBX-APIKEY": self.api_key}
-
-        if signed:
-            params["timestamp"] = int(time.time() * 1000)
-            params["signature"] = self._generate_signature(params)
-
         url = f"{self.base_url}{endpoint}"
 
         async with httpx.AsyncClient() as client:
             try:
+                # Signature and timestamp must be generated for each attempt
+                if signed:
+                    params["recvWindow"] = 10000
+                    params["timestamp"] = int(time.time() * 1000)
+                    params["signature"] = self._generate_signature(params)
+
                 request_kwargs = {"headers": headers}
                 if method.upper() in ("POST", "PUT", "DELETE"):
                     request_kwargs["data"] = params
@@ -261,14 +262,14 @@ class BinanceClient:
         return {item["symbol"]: float(item["price"]) for item in prices_data}
 
     async def create_order(
-        self, symbol: str, side: str, quantity: float, test: bool = False
+        self, symbol: str, side: str, quantity: str, test: bool = False
     ) -> Dict[str, Any]:
         """Creates a market order.
 
         Args:
             symbol: The trading symbol (e.g., 'BTCUSDT').
             side: The order side ('BUY' or 'SELL').
-            quantity: The amount to buy or sell.
+            quantity: The amount to buy or sell. Must be a plain decimal string.
             test: If True, sends a test order that is validated but not
                   executed. Defaults to False.
 

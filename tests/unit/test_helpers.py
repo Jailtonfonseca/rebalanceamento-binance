@@ -1,6 +1,6 @@
 import pytest
 from decimal import Decimal
-from app.utils.helpers import adjust_to_step_size
+from app.utils.helpers import adjust_to_step_size, format_quantity_for_api
 
 
 @pytest.mark.parametrize(
@@ -50,3 +50,21 @@ def test_adjust_to_step_size_invalid_input():
         adjust_to_step_size(None, "0.1")  # None quantity
     with pytest.raises(ValueError):
         adjust_to_step_size(0.1, None)  # None step size
+
+
+@pytest.mark.parametrize(
+    "quantity, expected_str",
+    [
+        (0.123, "0.123"),
+        (150.0, "150"),
+        (0.0000001, "0.0000001"),
+        (1.00000000, "1"),
+        (1.23450000, "1.2345"),
+    ],
+)
+def test_format_quantity_for_api(quantity, expected_str):
+    """
+    Tests that the format_quantity_for_api function correctly formats numbers
+    into plain decimal strings.
+    """
+    assert format_quantity_for_api(quantity) == expected_str

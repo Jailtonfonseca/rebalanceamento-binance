@@ -18,6 +18,7 @@ from app.services.cmc_client import CoinMarketCapClient
 from app.services.rebalance_engine import RebalanceEngine
 from app.services.models import ProposedTrade, RebalanceResult
 from app.db.models import RebalanceRun
+from app.utils.helpers import format_quantity_for_api
 
 logger = logging.getLogger(__name__)
 
@@ -191,10 +192,12 @@ class RebalanceExecutor:
                     logger.info(
                         f"EXECUTE: {trade.side} {trade.quantity} {trade.symbol}"
                     )
+                    # Format the quantity to a plain string before sending to the API
+                    quantity_str = format_quantity_for_api(trade.quantity)
                     await self.binance_client.create_order(
                         symbol=trade.symbol,
                         side=trade.side,
-                        quantity=trade.quantity,
+                        quantity=quantity_str,
                         test=False,  # This is a real order
                     )
                 else:
