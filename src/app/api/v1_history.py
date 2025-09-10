@@ -6,7 +6,7 @@ rebalancing runs that have been recorded in the database.
 from typing import List
 from datetime import datetime
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.db.models import get_db, RebalanceRun
@@ -30,9 +30,7 @@ class RebalanceRunOut(BaseModel):
     trades_executed: List | None
     errors: List[str] | None
 
-    class Config:
-        """Pydantic configuration."""
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- API Endpoint ---

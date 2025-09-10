@@ -47,7 +47,7 @@ async def get_config_page(
     """
     # Pass the current settings to the template
     return templates.TemplateResponse(
-        "config.html", {"request": request, "settings": settings.dict()}
+        "config.html", {"request": request, "settings": settings.model_dump()}
     )
 
 
