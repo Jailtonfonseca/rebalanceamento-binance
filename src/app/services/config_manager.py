@@ -209,7 +209,7 @@ class ConfigManager:
                         "api_key_encrypted"
                     ].encode("latin1")
 
-                return AppSettings.parse_obj(data)
+                return AppSettings.model_validate(data)
         except (json.JSONDecodeError, ValidationError, TypeError) as e:
             logger.error(f"Failed to load or validate config file: {e}", exc_info=True)
             logger.error(

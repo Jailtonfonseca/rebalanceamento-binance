@@ -240,7 +240,7 @@ class RebalanceExecutor:
             status=result.status,
             is_dry_run=is_dry_run,
             summary_message=result.message,
-            trades_executed=[t.dict() for t in result.trades],
+            trades_executed=[t.model_dump() for t in result.trades],
             errors=result.errors,
             total_fees_usd=result.total_fees_usd,
             projected_balances=result.projected_balances,

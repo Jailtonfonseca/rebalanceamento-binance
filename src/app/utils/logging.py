@@ -1,5 +1,6 @@
 import logging
 import json
+import re
 from logging.handlers import RotatingFileHandler
 
 from app.services.config_manager import DATA_DIR
@@ -69,11 +70,29 @@ def setup_logging():
     console_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     console_handler.setFormatter(console_formatter)
 
+    # Add a filter to redact sensitive information
+    signature_filter = RedactSignature()
+    file_handler.addFilter(signature_filter)
+    console_handler.addFilter(signature_filter)
+
     # Add handlers to the root logger
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
 
     logging.info("Logging configured successfully.")
+
+
+class RedactSignature(logging.Filter):
+    """A logging filter to redact sensitive data from log messages."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """
+        Redacts the 'signature' query parameter from log messages.
+        """
+        if isinstance(record.msg, str):
+            # This regex finds 'signature=...' and replaces the value.
+            record.msg = re.sub(r'(signature=)[0-9a-fA-F]+', r'\1[REDACTED]', record.msg)
+        return True
 
 
 def get_logger(name: str) -> logging.Logger:
