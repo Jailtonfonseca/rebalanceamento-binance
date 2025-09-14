@@ -4,6 +4,7 @@ This module uses APScheduler to run the rebalancing job at a configurable
 interval. It defines the job itself and provides a function to configure
 and start the scheduler based on the application's settings.
 """
+
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 

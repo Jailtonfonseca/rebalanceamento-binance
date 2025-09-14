@@ -91,7 +91,9 @@ class RedactSignature(logging.Filter):
         """
         if isinstance(record.msg, str):
             # This regex finds 'signature=...' and replaces the value.
-            record.msg = re.sub(r'(signature=)[0-9a-fA-F]+', r'\1[REDACTED]', record.msg)
+            record.msg = re.sub(
+                r"(signature=)[0-9a-fA-F]+", r"\1[REDACTED]", record.msg
+            )
         return True
 
 

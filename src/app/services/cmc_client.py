@@ -4,6 +4,7 @@ This module provides a high-level, asynchronous client for the CMC API,
 specifically for fetching cryptocurrency listing data. It includes custom
 exceptions for handling API-specific errors.
 """
+
 from typing import Any, Dict, Set
 
 import httpx
@@ -50,6 +51,7 @@ class CoinMarketCapClient:
         base_url: The base URL for the CMC API.
         headers: A dictionary of headers used for API requests.
     """
+
     def __init__(
         self, api_key: str, base_url: str = "https://pro-api.coinmarketcap.com"
     ):

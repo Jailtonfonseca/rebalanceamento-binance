@@ -4,6 +4,7 @@ This module provides the routes for viewing, updating, and testing the
 application's settings, including API keys and rebalancing strategies.
 It uses Pydantic models to ensure that no sensitive data is exposed.
 """
+
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -28,12 +29,14 @@ router = APIRouter()
 
 class PublicBinanceSettings(BaseModel):
     """A Pydantic model for publicly exposing Binance settings status."""
+
     api_key_set: bool
     secret_key_set: bool
 
 
 class PublicCMCSettings(BaseModel):
     """A Pydantic model for publicly exposing CoinMarketCap settings status."""
+
     api_key_set: bool
 
 

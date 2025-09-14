@@ -4,6 +4,7 @@ This module provides a high-level, asynchronous client for the Binance REST API,
 including methods for account management, fetching market data, and placing orders.
 It also defines custom exceptions for handling API-specific errors.
 """
+
 import time
 import hmac
 import hashlib
@@ -55,6 +56,7 @@ class BinanceClient:
         secret_key: The secret key for signing requests.
         base_url: The base URL for the Binance API.
     """
+
     def __init__(
         self, api_key: str, secret_key: str, base_url: str = "https://api.binance.com"
     ):
@@ -126,7 +128,9 @@ class BinanceClient:
                 if signed:
                     params_to_send["recvWindow"] = 10000
                     params_to_send["timestamp"] = int(time.time() * 1000)
-                    params_to_send["signature"] = self._generate_signature(params_to_send)
+                    params_to_send["signature"] = self._generate_signature(
+                        params_to_send
+                    )
 
                 request_kwargs = {"headers": headers}
                 if method.upper() in ("POST", "PUT", "DELETE"):

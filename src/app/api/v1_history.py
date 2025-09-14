@@ -3,6 +3,7 @@
 This module provides the route for fetching a paginated list of all past
 rebalancing runs that have been recorded in the database.
 """
+
 from typing import List
 from datetime import datetime
 from fastapi import APIRouter, Depends
@@ -21,6 +22,7 @@ class RebalanceRunOut(BaseModel):
     This model defines the structure of a rebalance run object as it is
     returned by the API. It is configured to be compatible with ORM objects.
     """
+
     id: int
     run_id: str
     timestamp: datetime
