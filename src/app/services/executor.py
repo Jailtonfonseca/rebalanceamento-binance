@@ -5,6 +5,7 @@ services (configuration, exchange clients, database) to perform the full
 rebalancing flow. It ensures that rebalancing operations are executed
 atomically and logs the entire process.
 """
+
 import asyncio
 import uuid
 import logging
@@ -131,10 +132,15 @@ class RebalanceExecutor:
 
                 proposed_trades = engine_result["proposed_trades"]
                 if not proposed_trades:
-                    message = "O portfólio já está balanceado. Nenhuma transação necessária."
+                    message = (
+                        "O portfólio já está balanceado. Nenhuma transação necessária."
+                    )
                     result = RebalanceResult(
-                        run_id=run_id, status="SUCCESS", message=message, trades=[],
-                        projected_balances=engine_result["projected_balances"]
+                        run_id=run_id,
+                        status="SUCCESS",
+                        message=message,
+                        trades=[],
+                        projected_balances=engine_result["projected_balances"],
                     )
                     self._save_result(result, is_dry_run)
                     return result
@@ -218,7 +224,9 @@ class RebalanceExecutor:
         if not is_dry_run:
             if errors:
                 status = "PARTIAL_SUCCESS"
-                message = f"Rebalanceamento parcialmente concluído com {len(errors)} erros."
+                message = (
+                    f"Rebalanceamento parcialmente concluído com {len(errors)} erros."
+                )
             else:
                 message = f"Rebalanceamento concluído com sucesso. {len(executed_trades)} transações executadas."
 

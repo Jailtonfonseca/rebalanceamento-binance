@@ -10,15 +10,21 @@ from app.db.models import init_db
 from app.utils.logging import setup_logging
 from prometheus_fastapi_instrumentator import Instrumentator
 
+from app.utils.middleware import RequestIDMiddleware, ErrorHandlingMiddleware
+
 # Create the FastAPI app
 app = FastAPI(
     title="Crypto Rebalancing Bot",
     description="A bot to automatically rebalance a crypto portfolio on Binance.",
-    version="1.0.0",
+    version="1.1.0",
 )
 
 # --- Prometheus Metrics ---
 Instrumentator().instrument(app).expose(app)
+
+# --- Middlewares ---
+app.add_middleware(RequestIDMiddleware)
+app.add_middleware(ErrorHandlingMiddleware)
 
 # --- Static files and Templates ---
 # Define the path to the static directory relative to this file's location.

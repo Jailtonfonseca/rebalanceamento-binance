@@ -4,6 +4,7 @@ This module provides the `RebalanceEngine`, a stateless class responsible for
 taking market data, current balances, and target allocations to produce a list
 of proposed trades needed to bring the portfolio back into alignment.
 """
+
 from typing import Dict, List, Set
 
 import logging
@@ -85,16 +86,32 @@ class RebalanceEngine:
 
         if not current_portfolio_values:
             logger.warning("No assets with value found to rebalance.")
-            return {"proposed_trades": [], "total_fees_usd": 0, "projected_balances": {}}
+            return {
+                "proposed_trades": [],
+                "total_fees_usd": 0,
+                "projected_balances": {},
+            }
 
-        total_eligible_value = sum(v for k, v in current_portfolio_values.items() if k != base_pair)
-        total_portfolio_value = sum(current_portfolio_values.values()) # Includes base pair
-        logger.debug(f"Total eligible portfolio value (for rebalancing): ${total_eligible_value:,.2f}")
-        logger.debug(f"Total portfolio value (including base pair): ${total_portfolio_value:,.2f}")
+        total_eligible_value = sum(
+            v for k, v in current_portfolio_values.items() if k != base_pair
+        )
+        total_portfolio_value = sum(
+            current_portfolio_values.values()
+        )  # Includes base pair
+        logger.debug(
+            f"Total eligible portfolio value (for rebalancing): ${total_eligible_value:,.2f}"
+        )
+        logger.debug(
+            f"Total portfolio value (including base pair): ${total_portfolio_value:,.2f}"
+        )
 
         if total_eligible_value == 0:
             logger.warning("Total portfolio value is zero. Nothing to rebalance.")
-            return {"proposed_trades": [], "total_fees_usd": 0, "projected_balances": {}}
+            return {
+                "proposed_trades": [],
+                "total_fees_usd": 0,
+                "projected_balances": {},
+            }
 
         # 3. Calculate deltas and generate proposed trades
         proposed_trades: List[ProposedTrade] = []
@@ -103,7 +120,11 @@ class RebalanceEngine:
                 continue
 
             current_value = current_portfolio_values.get(asset, 0.0)
-            current_alloc_pct = (current_value / total_eligible_value) * 100 if total_eligible_value else 0
+            current_alloc_pct = (
+                (current_value / total_eligible_value) * 100
+                if total_eligible_value
+                else 0
+            )
             target_alloc_pct = target_allocations.get(asset, 0.0)
 
             delta_pct = target_alloc_pct - current_alloc_pct
@@ -120,14 +141,32 @@ class RebalanceEngine:
 
             symbol_info = exchange_info.get(symbol)
             if not symbol_info:
-                logger.warning(f"No exchange info for {symbol}. Skipping asset {asset}.")
+                logger.warning(
+                    f"No exchange info for {symbol}. Skipping asset {asset}."
+                )
                 continue
 
-            lot_size_filter = next((f for f in symbol_info.get("filters", []) if f["filterType"] == "LOT_SIZE"), None)
-            min_notional_filter = next((f for f in symbol_info.get("filters", []) if f["filterType"] in ("MIN_NOTIONAL", "NOTIONAL")), None)
+            lot_size_filter = next(
+                (
+                    f
+                    for f in symbol_info.get("filters", [])
+                    if f["filterType"] == "LOT_SIZE"
+                ),
+                None,
+            )
+            min_notional_filter = next(
+                (
+                    f
+                    for f in symbol_info.get("filters", [])
+                    if f["filterType"] in ("MIN_NOTIONAL", "NOTIONAL")
+                ),
+                None,
+            )
 
             if not lot_size_filter or not min_notional_filter:
-                logger.warning(f"Missing LOT_SIZE or MIN_NOTIONAL filter for {symbol}. Skipping.")
+                logger.warning(
+                    f"Missing LOT_SIZE or MIN_NOTIONAL filter for {symbol}. Skipping."
+                )
                 continue
 
             step_size = lot_size_filter["stepSize"]
@@ -155,7 +194,9 @@ class RebalanceEngine:
                     fee_cost_usd=fee_cost,
                 )
             )
-            logger.info(f"Proposing trade: {side} {adjusted_quantity} {asset} for ~${final_trade_value:,.2f} (Fee: ~${fee_cost:,.2f})")
+            logger.info(
+                f"Proposing trade: {side} {adjusted_quantity} {asset} for ~${final_trade_value:,.2f} (Fee: ~${fee_cost:,.2f})"
+            )
 
         # 4. Calculate projected balances
         projected_balances = balances.copy()
@@ -172,22 +213,27 @@ class RebalanceEngine:
 
             if trade.side == "BUY":
                 # Assume fee is paid from the received asset (Binance standard)
-                projected_balances[trade.asset] = projected_balances.get(trade.asset, 0) + (asset_qty_change * (1 - trade_fee_pct / 100))
+                projected_balances[trade.asset] = projected_balances.get(
+                    trade.asset, 0
+                ) + (asset_qty_change * (1 - trade_fee_pct / 100))
                 projected_balances[base_pair] -= base_qty_change
             else:  # SELL
                 projected_balances[trade.asset] -= asset_qty_change
                 # Fee is deducted from the quote asset received
-                projected_balances[base_pair] += base_qty_change * (1 - trade_fee_pct / 100)
+                projected_balances[base_pair] += base_qty_change * (
+                    1 - trade_fee_pct / 100
+                )
 
         # 5. Format projected balances with USD values
         final_projected_balances = {}
         for asset, qty in projected_balances.items():
-            price = prices.get(f"{asset}{base_pair}", 1.0) if asset != base_pair else 1.0
+            price = (
+                prices.get(f"{asset}{base_pair}", 1.0) if asset != base_pair else 1.0
+            )
             final_projected_balances[asset] = {
                 "quantity": qty,
-                "value_usd": qty * price
+                "value_usd": qty * price,
             }
-
 
         return {
             "proposed_trades": proposed_trades,

@@ -4,6 +4,7 @@ This module defines the SQLAlchemy ORM models for the application's data,
 sets up the database engine and session management, and provides helper
 functions for database initialization and dependency injection.
 """
+
 import json
 from datetime import datetime
 from sqlalchemy import (
@@ -43,10 +44,13 @@ class Json(TypeDecorator):
     to Python objects when reading from the database. It is designed to work
     with SQLite, which does not have a native JSON type.
     """
+
     impl = Text
     cache_ok = True
 
-    def process_bind_param(self, value: dict | list | None, dialect: Dialect) -> str | None:
+    def process_bind_param(
+        self, value: dict | list | None, dialect: Dialect
+    ) -> str | None:
         """Serializes a Python object to a JSON string for database storage.
 
         Args:
@@ -60,7 +64,9 @@ class Json(TypeDecorator):
             return json.dumps(value)
         return value
 
-    def process_result_value(self, value: str | None, dialect: Dialect) -> dict | list | None:
+    def process_result_value(
+        self, value: str | None, dialect: Dialect
+    ) -> dict | list | None:
         """Deserializes a JSON string from the database into a Python object.
 
         Args:

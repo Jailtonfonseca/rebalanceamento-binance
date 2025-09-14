@@ -5,6 +5,7 @@ for validation and Fernet for encryption. It handles loading settings from a
 JSON file, encrypting and decrypting API keys, managing a master encryption key,
 and providing a singleton instance of the configuration for the application.
 """
+
 import os
 import json
 from pathlib import Path
@@ -27,6 +28,7 @@ SECRET_KEY_FILE = DATA_DIR / "secret.key"
 
 class DecryptionError(Exception):
     """Raised when data decryption fails, likely due to an incorrect master key."""
+
     pass
 
 
@@ -42,6 +44,7 @@ class BinanceSettings(BaseModel):
         api_key_encrypted: The encrypted Binance API key.
         secret_key_encrypted: The encrypted Binance secret key.
     """
+
     api_key: str = ""
     secret_key: str = ""
     # These will hold the encrypted values
@@ -56,6 +59,7 @@ class CMCSettings(BaseModel):
         api_key: The plaintext CMC API key (used for input, not saved).
         api_key_encrypted: The encrypted CMC API key.
     """
+
     api_key: str = ""
     api_key_encrypted: Optional[bytes] = None
 
@@ -66,6 +70,7 @@ class AppSettings(BaseModel):
     This model aggregates all other settings models and defines the structure
     of the main `config.json` file. It includes validation rules.
     """
+
     admin_user: str = Field("admin", description="Username for the web UI.")
     password_hash: Optional[bytes] = Field(
         None, description="Hashed password for the admin user."
@@ -130,6 +135,7 @@ class ConfigManager:
         fernet: The Fernet instance used for encryption/decryption.
         settings: The Pydantic model instance holding the current settings.
     """
+
     def __init__(
         self, config_path: Path = CONFIG_FILE, secret_key_path: Path = SECRET_KEY_FILE
     ):
@@ -165,9 +171,15 @@ class ConfigManager:
             self.secret_key_path.write_bytes(key)
             logger.warning("=" * 80)
             logger.warning("!!! NEW MASTER KEY GENERATED !!!")
-            logger.warning(f"A new master key has been generated and saved to: {self.secret_key_path}")
-            logger.warning("You MUST back up this key and set it as the MASTER_KEY environment variable.")
-            logger.warning("If you lose this key, you will lose access to your encrypted API keys.")
+            logger.warning(
+                f"A new master key has been generated and saved to: {self.secret_key_path}"
+            )
+            logger.warning(
+                "You MUST back up this key and set it as the MASTER_KEY environment variable."
+            )
+            logger.warning(
+                "If you lose this key, you will lose access to your encrypted API keys."
+            )
             logger.warning(f"MASTER_KEY: {key.decode()}")
             logger.warning("=" * 80)
 

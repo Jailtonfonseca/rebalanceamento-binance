@@ -1,5 +1,4 @@
-import math
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal
 
 
 def adjust_to_step_size(quantity: float, step_size: str) -> float:
@@ -26,7 +25,7 @@ def adjust_to_step_size(quantity: float, step_size: str) -> float:
         quantity_dec = Decimal(str(quantity))
         step_size_dec = Decimal(step_size)
     except Exception as e:
-        raise ValueError(f"Invalid number format for quantity or step_size") from e
+        raise ValueError("Invalid number format for quantity or step_size") from e
 
     if step_size_dec <= 0:
         raise ValueError("Step size must be positive.")
@@ -52,4 +51,8 @@ def format_quantity_for_api(quantity: float) -> str:
     d = Decimal(str(quantity))
     # 'f' format specifier prevents scientific notation.
     # The string is normalized to remove trailing zeros.
-    return format(d, 'f').rstrip('0').rstrip('.') if '.' in format(d, 'f') else format(d, 'f')
+    return (
+        format(d, "f").rstrip("0").rstrip(".")
+        if "." in format(d, "f")
+        else format(d, "f")
+    )

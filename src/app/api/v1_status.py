@@ -3,12 +3,41 @@
 This module provides the route to get the current asset balances from the
 Binance account and their approximate value in USD.
 """
-from fastapi import APIRouter, Depends
+
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.services.config_manager import get_config_manager, ConfigManager
 from app.services.binance_client import BinanceClient, InvalidAPIKeys
+from app.db.models import SessionLocal
+from app.services.scheduler import scheduler
+from sqlalchemy import text
 
 router = APIRouter(tags=["Status"])
+
+
+@router.get("/health", tags=["Status"])
+async def health_check():
+    """Lightweight liveness probe.
+
+    Returns 200 when the API is responsive. Includes a tiny DB touch and
+    scheduler state for quick diagnostics.
+    """
+    # Minimal DB touch: open and close a session
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={"status": "error", "db": str(e)})
+    finally:
+        try:
+            db.close()
+        except Exception:
+            pass
+
+    return {
+        "status": "ok",
+        "scheduler_running": bool(getattr(scheduler, "running", False)),
+    }
 
 
 @router.get("/status/balances")

@@ -3,6 +3,7 @@
 This module provides the route to manually initiate a portfolio
 rebalancing run.
 """
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -52,7 +53,8 @@ async def run_rebalance_manually(
 
     if not all([binance_api_key, binance_secret_key, cmc_api_key]):
         raise HTTPException(
-            status_code=400, detail="As chaves de API não estão totalmente configuradas."
+            status_code=400,
+            detail="As chaves de API não estão totalmente configuradas.",
         )
 
     # Initialize all services needed for the flow
@@ -78,6 +80,4 @@ async def run_rebalance_manually(
         raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
         # Catch other potential errors during setup
-        raise HTTPException(
-            status_code=500, detail=f"Ocorreu um erro inesperado: {e}"
-        )
+        raise HTTPException(status_code=500, detail=f"Ocorreu um erro inesperado: {e}")

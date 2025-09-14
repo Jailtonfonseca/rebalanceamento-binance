@@ -4,6 +4,7 @@ This module contains the FastAPI routes that render and return the Jinja2
 templates for the web user interface. These endpoints are not part of the
 public API schema.
 """
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
