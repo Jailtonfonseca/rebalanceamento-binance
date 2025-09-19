@@ -6,10 +6,11 @@ and start the scheduler based on the application's settings.
 """
 
 import logging
+import uuid
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from app.db.models import SessionLocal
-from app.services.config_manager import get_config_manager, AppSettings
+from app.db.models import SessionLocal, RebalanceRun
+from app.services.config_manager import get_config_manager, AppSettings, DecryptionError
 from app.services.binance_client import BinanceClient
 from app.services.cmc_client import CoinMarketCapClient
 from app.services.rebalance_engine import RebalanceEngine
@@ -38,10 +39,10 @@ async def scheduled_rebalance_job():
     config_manager = get_config_manager()
     settings = config_manager.get_settings()
 
-    # If periodic strategy is not set, or if it's dry run, don't execute
-    if settings.strategy != "periodic" or settings.dry_run:
+    # Only run the periodic job when strategy is set to 'periodic'.
+    if settings.strategy != "periodic":
         logger.info(
-            "Scheduler job skipped: Strategy is not 'periodic' or dry_run is enabled."
+            "Scheduler job skipped: Strategy is not 'periodic'."
         )
         return
 
@@ -57,8 +58,7 @@ async def scheduled_rebalance_job():
         cmc_api_key = config_manager.decrypt(settings.cmc.api_key_encrypted)
 
         if not all([binance_api_key, binance_secret_key, cmc_api_key]):
-            logger.error("Scheduler job failed: API keys are not fully configured.")
-            return
+            logger.error("Scheduler job proceeding but API keys are not fully configured. The run may fail and be recorded as FAILED.")
 
         # Initialize all services
         binance_client = BinanceClient(
@@ -75,8 +75,28 @@ async def scheduled_rebalance_job():
             db_session=db,
         )
 
-        await executor.execute_rebalance_flow()
+        await executor.execute_rebalance_flow(dry_run_override=settings.dry_run)
 
+    except DecryptionError as e:
+        # Record decryption-related failures into history so the user can see attempts
+        run_id = str(uuid.uuid4())
+        db.add(
+            RebalanceRun(
+                run_id=run_id,
+                status="FAILED",
+                is_dry_run=True,
+                summary_message="Falha ao descriptografar chaves. Verifique a MASTER_KEY e regrave as chaves.",
+                trades_executed=[],
+                errors=[str(e)],
+                total_fees_usd=0.0,
+                projected_balances=None,
+            )
+        )
+        db.commit()
+        logger.error(
+            f"Decryption error during scheduled job; recorded FAILED run_id={run_id}: {e}",
+            exc_info=True,
+        )
     except Exception as e:
         logger.error(
             f"An error occurred during the scheduled rebalance job: {e}", exc_info=True
