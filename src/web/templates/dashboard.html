@@ -86,7 +86,9 @@
 <div class="card">
     <h2>Histórico de Valor da Carteira</h2>
     <p id="portfolio-history-empty" class="chart-placeholder" style="display:none;">Nenhum histórico disponível ainda.</p>
-    <canvas id="portfolio-history-chart" height="220" style="display:none;"></canvas>
+    <div id="portfolio-history-wrapper" class="chart-wrapper" style="display:none;">
+        <canvas id="portfolio-history-chart" height="220"></canvas>
+    </div>
 </div>
 
 <div class="card">
@@ -160,18 +162,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(data.error);
             }
 
-            totalBalanceEl.textContent = `$${data.total_value_usd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            totalBalanceEl.textContent = formatCurrencyValue(data.total_value_usd, { fallbackZero: true });
             tableBody.innerHTML = ''; // Clear existing rows
 
             const sortedAssets = Object.keys(data.balances).sort((a, b) => data.balances[b].value_usd - data.balances[a].value_usd);
 
             for (const asset of sortedAssets) {
                 const balance = data.balances[asset];
+                const formattedQuantity = formatQuantityValue(balance.quantity);
+                const formattedValueUsd = formatCurrencyValue(balance.value_usd);
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${asset}</td>
-                    <td>${balance.quantity}</td>
-                    <td>$${balance.value_usd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td>${formattedQuantity}</td>
+                    <td>${formattedValueUsd}</td>
                 `;
                 tableBody.appendChild(row);
             }
@@ -188,6 +192,41 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
     const quantityFormatter = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 8 });
+    const activeAssetCharts = [];
+
+    function parseNumber(value) {
+        if (value === null || value === undefined) {
+            return null;
+        }
+        if (typeof value === 'string' && value.trim() === '') {
+            return null;
+        }
+        const numericValue = Number(value);
+        return Number.isFinite(numericValue) ? numericValue : null;
+    }
+
+    function formatCurrencyValue(value, { fallbackZero = false } = {}) {
+        const numericValue = parseNumber(value);
+        if (numericValue === null) {
+            return fallbackZero ? currencyFormatter.format(0) : '—';
+        }
+        return currencyFormatter.format(numericValue);
+    }
+
+    function formatQuantityValue(value) {
+        const numericValue = parseNumber(value);
+        return numericValue === null ? '—' : quantityFormatter.format(numericValue);
+    }
+
+    function destroyAssetCharts() {
+        while (activeAssetCharts.length > 0) {
+            const chart = activeAssetCharts.pop();
+            if (chart) {
+                chart.destroy();
+            }
+        }
+    }
+
     const chartPalette = [
         { border: '#0d6efd', background: 'rgba(13, 110, 253, 0.12)' },
         { border: '#20c997', background: 'rgba(32, 201, 151, 0.12)' },
@@ -200,12 +239,20 @@ document.addEventListener('DOMContentLoaded', function () {
     ];
 
     async function fetchPortfolioHistory() {
+        const portfolioWrapper = document.getElementById('portfolio-history-wrapper');
         const portfolioCanvas = document.getElementById('portfolio-history-chart');
         const portfolioEmpty = document.getElementById('portfolio-history-empty');
         const assetContainer = document.getElementById('asset-charts-container');
         const assetEmpty = document.getElementById('asset-charts-empty');
 
-        if (!portfolioCanvas || !assetContainer || typeof Chart === 'undefined') {
+        if (portfolioEmpty && !portfolioEmpty.dataset.defaultText) {
+            portfolioEmpty.dataset.defaultText = portfolioEmpty.textContent;
+        }
+        if (assetEmpty && !assetEmpty.dataset.defaultText) {
+            assetEmpty.dataset.defaultText = assetEmpty.textContent;
+        }
+
+        if (!portfolioWrapper || !portfolioCanvas || !assetContainer || typeof Chart === 'undefined') {
             return;
         }
 
@@ -218,13 +265,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const portfolioData = Array.isArray(data.portfolio) ? data.portfolio : [];
             if (portfolioData.length === 0) {
-                portfolioCanvas.style.display = 'none';
+                portfolioWrapper.style.display = 'none';
+                if (portfolioEmpty && portfolioEmpty.dataset.defaultText !== undefined) {
+                    portfolioEmpty.textContent = portfolioEmpty.dataset.defaultText;
+                }
                 portfolioEmpty.style.display = 'block';
             } else {
                 portfolioEmpty.style.display = 'none';
-                portfolioCanvas.style.display = 'block';
+                portfolioWrapper.style.display = 'block';
                 const labels = portfolioData.map(point => new Date(point.timestamp).toLocaleString('pt-BR'));
-                const values = portfolioData.map(point => Number(point.total_value_usd ?? 0));
+                const values = portfolioData.map(point => {
+                    const numericValue = parseNumber(point.total_value_usd);
+                    return numericValue ?? 0;
+                });
 
                 const existingPortfolioChart = Chart.getChart(portfolioCanvas);
                 if (existingPortfolioChart) {
@@ -245,32 +298,36 @@ document.addEventListener('DOMContentLoaded', function () {
                             pointRadius: 3,
                         }]
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                ticks: {
-                                    callback: (value) => currencyFormatter.format(value ?? 0),
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    ticks: {
+                                        callback: (value) => formatCurrencyValue(value, { fallbackZero: true }),
+                                    }
                                 }
-                            }
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: (context) => `Valor: ${currencyFormatter.format(context.parsed.y ?? 0)}`,
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => `Valor: ${formatCurrencyValue(context.parsed.y, { fallbackZero: true })}`,
+                                    }
                                 }
                             }
                         }
-                    }
-                });
+                    });
             }
 
             const assetEntries = Object.entries(data.assets || {}).filter(([, points]) => Array.isArray(points) && points.length > 0);
+            destroyAssetCharts();
             assetContainer.innerHTML = '';
 
             if (assetEntries.length === 0) {
+                if (assetEmpty && assetEmpty.dataset.defaultText !== undefined) {
+                    assetEmpty.textContent = assetEmpty.dataset.defaultText;
+                }
                 assetEmpty.style.display = 'block';
             } else {
                 assetEmpty.style.display = 'none';
@@ -284,20 +341,28 @@ document.addEventListener('DOMContentLoaded', function () {
                     title.textContent = asset;
                     wrapper.appendChild(title);
 
+                    const chartWrapper = document.createElement('div');
+                    chartWrapper.className = 'chart-wrapper';
+
                     const canvas = document.createElement('canvas');
                     canvas.height = 220;
-                    wrapper.appendChild(canvas);
+                    chartWrapper.appendChild(canvas);
+
+                    wrapper.appendChild(chartWrapper);
 
                     assetContainer.appendChild(wrapper);
 
                     const labels = points.map(point => new Date(point.timestamp).toLocaleString('pt-BR'));
-                    const values = points.map(point => Number(point.value_usd ?? 0));
-                    const quantities = points.map(point => point.quantity !== undefined && point.quantity !== null ? Number(point.quantity) : null);
+                    const values = points.map(point => {
+                        const numericValue = parseNumber(point.value_usd);
+                        return numericValue ?? 0;
+                    });
+                    const quantities = points.map(point => parseNumber(point.quantity));
 
                     const paletteEntry = chartPalette[colorIndex % chartPalette.length];
                     colorIndex += 1;
 
-                    new Chart(canvas.getContext('2d'), {
+                    const chartInstance = new Chart(canvas.getContext('2d'), {
                         type: 'line',
                         data: {
                             labels,
@@ -317,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             scales: {
                                 y: {
                                     ticks: {
-                                        callback: (value) => currencyFormatter.format(value ?? 0),
+                                        callback: (value) => formatCurrencyValue(value, { fallbackZero: true }),
                                     }
                                 }
                             },
@@ -327,10 +392,10 @@ document.addEventListener('DOMContentLoaded', function () {
                                     callbacks: {
                                         label: (context) => {
                                             const idx = context.dataIndex;
-                                            const parts = [`Valor: ${currencyFormatter.format(context.parsed.y ?? 0)}`];
+                                            const parts = [`Valor: ${formatCurrencyValue(context.parsed.y, { fallbackZero: true })}`];
                                             const quantity = quantities[idx];
                                             if (quantity !== null) {
-                                                parts.push(`Quantidade: ${quantityFormatter.format(quantity)}`);
+                                                parts.push(`Quantidade: ${formatQuantityValue(quantity)}`);
                                             }
                                             return parts;
                                         }
@@ -339,12 +404,14 @@ document.addEventListener('DOMContentLoaded', function () {
                             }
                         }
                     });
+                    activeAssetCharts.push(chartInstance);
                 }
             }
         } catch (error) {
             console.error('Erro ao carregar histórico da carteira', error);
-            if (portfolioCanvas) {
-                portfolioCanvas.style.display = 'none';
+            destroyAssetCharts();
+            if (portfolioWrapper) {
+                portfolioWrapper.style.display = 'none';
             }
             if (portfolioEmpty) {
                 portfolioEmpty.textContent = `Não foi possível carregar o histórico da carteira: ${error.message}`;
