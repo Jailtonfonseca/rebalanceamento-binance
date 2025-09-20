@@ -74,15 +74,15 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for asset, details in run.projected_balances.items()|sort(attribute='1.value_usd', reverse=true) %}
+                        {% for asset, details in run.sorted_balances or [] %}
                         <tr>
                             <td>{{ asset }}</td>
-                            <td>{{ "%.8f"|format(details.quantity|float) }}</td>
+                            <td>{{ "%.8f"|format(details.get('quantity', 0)|float) }}</td>
                             {% set value_base = details.get('value_in_base', details.get('value_usd', 0)) %}
                             <td>{{ "%.2f"|format(value_base|float) }} {{ run.base_pair }}</td>
                             <td>
-                                {% if details.value_usd is not none %}
-                                ${{ "%.2f"|format(details.value_usd|float) }}
+                                {% if details.get('value_usd') is not none %}
+                                ${{ "%.2f"|format(details.get('value_usd', 0)|float) }}
                                 {% else %}
                                 —
                                 {% endif %}

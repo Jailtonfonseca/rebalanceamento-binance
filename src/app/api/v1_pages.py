@@ -15,6 +15,28 @@ from app.db.models import get_db, RebalanceRun
 router = APIRouter(tags=["Frontend Pages"], include_in_schema=False)
 
 
+def _sorted_projected_balances(projected_balances):
+    """Return projected balances sorted by USD value in descending order."""
+
+    if not isinstance(projected_balances, dict):
+        return []
+
+    normalized_items = []
+    for asset, raw_details in projected_balances.items():
+        details = raw_details if isinstance(raw_details, dict) else {}
+        normalized_items.append((asset, details))
+
+    def balance_value(item):
+        _, details = item
+        value = details.get("value_usd", 0.0)
+        try:
+            return float(value or 0.0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    return sorted(normalized_items, key=balance_value, reverse=True)
+
+
 @router.get("/")
 async def get_dashboard_page(request: Request, db: Session = Depends(get_db)):
     """Serves the main dashboard page.
@@ -31,26 +53,7 @@ async def get_dashboard_page(request: Request, db: Session = Depends(get_db)):
     sorted_balances = []
     if last_run is not None:
         projected_balances = getattr(last_run, "projected_balances", None)
-
-        if isinstance(projected_balances, dict):
-            def safe_value_usd(item: tuple[str, object]) -> float:
-                """Return a comparable USD value for ordering projected balances."""
-
-                _, details = item
-
-                if isinstance(details, dict):
-                    value = details.get("value_usd", 0.0)
-                else:
-                    value = 0.0
-
-                try:
-                    return float(value or 0.0)
-                except (TypeError, ValueError):
-                    return 0.0
-
-            sorted_balances = sorted(
-                projected_balances.items(), key=safe_value_usd, reverse=True
-            )
+        sorted_balances = _sorted_projected_balances(projected_balances)
 
     return templates.TemplateResponse(
         "dashboard.html",
@@ -93,8 +96,16 @@ async def get_history_page(request: Request, db: Session = Depends(get_db)):
         A Jinja2 TemplateResponse for the history page.
     """
     history = (
-        db.query(RebalanceRun).order_by(RebalanceRun.timestamp.desc()).limit(100).all()
+        db.query(RebalanceRun)
+        .order_by(RebalanceRun.timestamp.desc())
+        .limit(100)
+        .all()
     )
+
+    for run in history:
+        projected_balances = getattr(run, "projected_balances", None)
+        run.sorted_balances = _sorted_projected_balances(projected_balances)
+
     return templates.TemplateResponse(
         "history.html", {"request": request, "history": history}
     )
