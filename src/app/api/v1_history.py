@@ -4,8 +4,9 @@ This module provides the route for fetching a paginated list of all past
 rebalancing runs that have been recorded in the database.
 """
 
-from typing import List
-from datetime import datetime
+from collections import defaultdict
+from typing import Dict, List
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
@@ -54,3 +55,74 @@ async def get_rebalance_history(db: Session = Depends(get_db), limit: int = 100)
         .all()
     )
     return history
+
+
+@router.get("/history/portfolio-stats")
+async def get_portfolio_statistics(db: Session = Depends(get_db)) -> Dict[str, object]:
+    """Builds time-series data for the portfolio and each asset.
+
+    Args:
+        db: The database session, injected by FastAPI.
+
+    Returns:
+        A dictionary containing a list with the total portfolio value over time
+        and a mapping with the historical values for each individual asset.
+    """
+
+    runs = (
+        db.query(RebalanceRun)
+        .order_by(RebalanceRun.timestamp.asc())
+        .all()
+    )
+
+    portfolio_points: List[Dict[str, object]] = []
+    asset_points: Dict[str, List[Dict[str, object]]] = defaultdict(list)
+
+    for run in runs:
+        if run.timestamp is None:
+            continue
+
+        timestamp = run.timestamp.replace(tzinfo=timezone.utc)
+        timestamp_iso = timestamp.isoformat().replace("+00:00", "Z")
+
+        total_after = run.total_value_usd_after
+        if total_after is None and isinstance(run.projected_balances, dict):
+            total_after = sum(
+                float(details.get("value_usd", 0.0))
+                for details in run.projected_balances.values()
+                if isinstance(details, dict)
+            )
+
+        if total_after is not None:
+            portfolio_points.append(
+                {
+                    "timestamp": timestamp_iso,
+                    "total_value_usd": round(float(total_after), 2),
+                }
+            )
+
+        if not isinstance(run.projected_balances, dict):
+            continue
+
+        for asset, details in run.projected_balances.items():
+            if not isinstance(details, dict):
+                continue
+
+            value_usd = details.get("value_usd")
+            quantity = details.get("quantity")
+
+            if value_usd is None and quantity is None:
+                continue
+
+            point: Dict[str, object] = {"timestamp": timestamp_iso}
+            if value_usd is not None:
+                point["value_usd"] = round(float(value_usd), 2)
+            if quantity is not None:
+                point["quantity"] = float(quantity)
+
+            asset_points[asset].append(point)
+
+    return {
+        "portfolio": portfolio_points,
+        "assets": {asset: points for asset, points in sorted(asset_points.items())},
+    }
