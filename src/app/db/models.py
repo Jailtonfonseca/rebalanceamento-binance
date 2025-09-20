@@ -16,6 +16,7 @@ from sqlalchemy import (
     Float,
     Text,
     Boolean,
+    text,
 )
 from sqlalchemy.orm import sessionmaker, declarative_base, validates
 from sqlalchemy.types import TypeDecorator
@@ -111,6 +112,8 @@ class RebalanceRun(Base):
     errors = Column(Json, nullable=True)
     projected_balances = Column(Json, nullable=True)
     total_fees_usd = Column(Float, nullable=True)
+    trigger = Column(String, nullable=False, default="manual")
+    base_pair = Column(String, nullable=False, default="USDT")
 
     @validates("timestamp")
     def _ensure_timezone(self, key: str, value: datetime | None) -> datetime | None:
@@ -135,6 +138,26 @@ def init_db():
     """
     DATA_DIR.mkdir(exist_ok=True)
     Base.metadata.create_all(bind=engine)
+
+    with engine.begin() as connection:
+        columns = {
+            row[1]
+            for row in connection.execute(text("PRAGMA table_info(rebalance_runs);"))
+        }
+
+        if "trigger" not in columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE rebalance_runs ADD COLUMN trigger VARCHAR NOT NULL DEFAULT 'manual'"
+                )
+            )
+
+        if "base_pair" not in columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE rebalance_runs ADD COLUMN base_pair VARCHAR NOT NULL DEFAULT 'USDT'"
+                )
+            )
 
 
 def get_db():

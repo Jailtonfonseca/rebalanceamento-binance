@@ -32,6 +32,8 @@ class RebalanceRunOut(BaseModel):
     summary_message: str
     trades_executed: List | None
     errors: List[str] | None
+    trigger: str
+    base_pair: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -88,7 +90,11 @@ async def get_portfolio_statistics(db: Session = Depends(get_db)) -> Dict[str, o
         total_after = run.total_value_usd_after
         if total_after is None and isinstance(run.projected_balances, dict):
             total_after = sum(
-                float(details.get("value_usd", 0.0))
+                float(
+                    details.get("value_usd")
+                    or details.get("value_in_base")
+                    or 0.0
+                )
                 for details in run.projected_balances.values()
                 if isinstance(details, dict)
             )
@@ -109,14 +115,17 @@ async def get_portfolio_statistics(db: Session = Depends(get_db)) -> Dict[str, o
                 continue
 
             value_usd = details.get("value_usd")
+            value_in_base = details.get("value_in_base")
             quantity = details.get("quantity")
 
-            if value_usd is None and quantity is None:
+            if value_usd is None and value_in_base is None and quantity is None:
                 continue
 
             point: Dict[str, object] = {"timestamp": timestamp_iso}
             if value_usd is not None:
                 point["value_usd"] = round(float(value_usd), 2)
+            if value_in_base is not None:
+                point["value_in_base"] = round(float(value_in_base), 2)
             if quantity is not None:
                 point["quantity"] = float(quantity)
 

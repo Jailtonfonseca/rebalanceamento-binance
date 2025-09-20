@@ -32,8 +32,11 @@ class ProposedTrade(BaseModel):
     asset: str = Field(description="The asset being traded, e.g., 'BTC'.")
     side: Literal["BUY", "SELL"]
     quantity: float = Field(description="The final, adjusted quantity to be traded.")
+    estimated_value_base: float = Field(
+        description="The estimated value of the trade in the configured base pair."
+    )
     estimated_value_usd: float = Field(
-        description="The estimated value of the trade in the base currency."
+        description="The estimated value of the trade converted to USD."
     )
     reason: str = Field(description="Explanation for why this trade is proposed.")
     fee_cost_usd: float = Field(
@@ -75,4 +78,7 @@ class RebalanceResult(BaseModel):
     )
     projected_balances: Optional[dict] = Field(
         None, description="The projected balances after the rebalance."
+    )
+    trigger: Literal["manual", "scheduled"] = Field(
+        "manual", description="Identifies whether the run was manual or scheduled."
     )

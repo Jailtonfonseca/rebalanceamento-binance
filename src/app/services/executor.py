@@ -20,6 +20,11 @@ from app.services.rebalance_engine import RebalanceEngine
 from app.services.models import ProposedTrade, RebalanceResult
 from app.db.models import RebalanceRun
 from app.utils.helpers import format_quantity_for_api
+from app.utils.pricing import (
+    get_asset_base_value,
+    get_asset_usd_value,
+    resolve_base_to_usd_rate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +70,7 @@ class RebalanceExecutor:
         self.db = db_session
 
     async def execute_rebalance_flow(
-        self, dry_run_override: bool = None
+        self, dry_run_override: bool = None, trigger_source: str = "manual"
     ) -> RebalanceResult:
         """Executes the full rebalancing flow.
 
@@ -152,17 +157,21 @@ class RebalanceExecutor:
                         message=message,
                         trades=[],
                         projected_balances=projected_balances,
+                        trigger=trigger_source,
                     )
                     self._save_result(
                         result,
                         is_dry_run,
                         total_value_usd_before=total_value_before,
                         total_value_usd_after=total_value_after,
+                        trigger_source=trigger_source,
+                        base_pair=self.config.base_pair,
                     )
                     return result
 
                 # 3. Execute or simulate trades
                 result = await self._execute_plan(proposed_trades, run_id, is_dry_run)
+                result.trigger = trigger_source
 
                 # 4. Add final data to result and save to the database
                 result.projected_balances = projected_balances
@@ -172,6 +181,8 @@ class RebalanceExecutor:
                     is_dry_run,
                     total_value_usd_before=total_value_before,
                     total_value_usd_after=total_value_after,
+                    trigger_source=trigger_source,
+                    base_pair=self.config.base_pair,
                 )
 
                 logger.info(f"--- Finished Rebalance Run (ID: {run_id}) ---")
@@ -182,13 +193,19 @@ class RebalanceExecutor:
                     f"Unhandled exception during rebalance flow: {e}", exc_info=True
                 )
                 result = RebalanceResult(
-                    run_id=run_id, status="FAILED", message=str(e), trades=[]
+                    run_id=run_id,
+                    status="FAILED",
+                    message=str(e),
+                    trades=[],
+                    trigger=trigger_source,
                 )
                 self._save_result(
                     result,
                     is_dry_run=True,
                     total_value_usd_before=total_value_before,
                     total_value_usd_after=None,
+                    trigger_source=trigger_source,
+                    base_pair=self.config.base_pair,
                 )  # Always save failed runs as "dry"
                 raise
 
@@ -271,23 +288,34 @@ class RebalanceExecutor:
             return None
 
         total_value = 0.0
+        base_pair = self.config.base_pair
+        base_to_usd = resolve_base_to_usd_rate(prices, base_pair)
+
         for asset, quantity in balances.items():
-            if asset == self.config.base_pair:
-                total_value += quantity
+            if quantity == 0:
                 continue
 
-            symbol = f"{asset}{self.config.base_pair}"
-            price = prices.get(symbol)
-            if price is None:
+            price_in_base = get_asset_base_value(prices, asset, base_pair)
+            if price_in_base is None:
                 logger.debug(
                     "Skipping asset %s in total calculation; missing price for %s",
                     asset,
-                    symbol,
+                    base_pair,
                 )
                 continue
-            total_value += quantity * price
 
-        return total_value
+            value_in_base = quantity * price_in_base
+            if base_to_usd is not None:
+                total_value += value_in_base * base_to_usd
+                continue
+
+            asset_usd_price = get_asset_usd_value(prices, asset, base_pair)
+            if asset_usd_price is not None:
+                total_value += quantity * asset_usd_price
+            else:
+                total_value += value_in_base
+
+        return total_value if total_value else None
 
     @staticmethod
     def _calculate_total_from_projected(
@@ -307,6 +335,8 @@ class RebalanceExecutor:
                 continue
             value = details.get("value_usd")
             if value is None:
+                value = details.get("value_in_base")
+            if value is None:
                 continue
             total_value += float(value)
 
@@ -319,6 +349,8 @@ class RebalanceExecutor:
         *,
         total_value_usd_before: float | None = None,
         total_value_usd_after: float | None = None,
+        trigger_source: str,
+        base_pair: str,
     ):
         """Saves the result of a rebalancing run to the database.
 
@@ -340,6 +372,8 @@ class RebalanceExecutor:
             projected_balances=result.projected_balances,
             total_value_usd_before=total_value_usd_before,
             total_value_usd_after=total_value_usd_after,
+            trigger=trigger_source,
+            base_pair=base_pair,
         )
         self.db.add(db_run)
         self.db.commit()

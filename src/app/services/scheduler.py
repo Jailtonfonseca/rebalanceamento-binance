@@ -75,7 +75,7 @@ async def scheduled_rebalance_job():
             db_session=db,
         )
 
-        await executor.execute_rebalance_flow()
+        await executor.execute_rebalance_flow(trigger_source="scheduled")
 
     except Exception as e:
         logger.error(

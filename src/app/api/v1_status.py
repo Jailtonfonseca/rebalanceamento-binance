@@ -8,6 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.services.config_manager import get_config_manager, ConfigManager
 from app.services.binance_client import BinanceClient, InvalidAPIKeys
+from app.utils.pricing import (
+    get_asset_base_value,
+    get_asset_usd_value,
+    resolve_base_to_usd_rate,
+)
 from app.db.models import SessionLocal
 from app.services.scheduler import scheduler
 from sqlalchemy import text
@@ -68,27 +73,48 @@ async def get_current_balances(
     try:
         client = BinanceClient(api_key=api_key, secret_key=secret_key)
         balances = await client.get_account_balances()
-        # Optional: Fetch prices to show USD value
         prices = await client.get_all_prices()
 
-        balances_with_value = {}
-        total_value = 0
-        for asset, qty in balances.items():
-            value = 0
-            if asset == settings.base_pair:
-                value = qty
-            elif f"{asset}{settings.base_pair}" in prices:
-                value = qty * prices[f"{asset}{settings.base_pair}"]
+        base_pair = settings.base_pair
+        base_to_usd = resolve_base_to_usd_rate(prices, base_pair)
 
-            if value > 1:  # Only show assets with more than $1 value
-                balances_with_value[asset] = {
-                    "quantity": qty,
-                    "value_usd": round(value, 2),
-                }
-                total_value += value
+        balances_with_value = {}
+        total_value_base = 0.0
+        total_value_usd: float | None = 0.0 if base_to_usd is not None else None
+
+        for asset, qty in balances.items():
+            if qty == 0:
+                continue
+
+            price_in_base = get_asset_base_value(prices, asset, base_pair)
+            if price_in_base is None:
+                continue
+
+            value_in_base = qty * price_in_base
+            price_in_usd = get_asset_usd_value(prices, asset, base_pair)
+            value_usd = qty * price_in_usd if price_in_usd is not None else None
+
+            display_value = value_usd if value_usd is not None else value_in_base
+            if display_value < 1:
+                continue
+
+            entry = {
+                "quantity": qty,
+                "value_in_base": round(value_in_base, 2),
+            }
+            if value_usd is not None:
+                entry["value_usd"] = round(value_usd, 2)
+
+            balances_with_value[asset] = entry
+            total_value_base += value_in_base
+            if total_value_usd is not None and value_usd is not None:
+                total_value_usd += value_usd
 
         return {
-            "total_value_usd": round(total_value, 2),
+            "base_pair": base_pair,
+            "base_to_usd_rate": base_to_usd,
+            "total_value_in_base": round(total_value_base, 2),
+            "total_value_usd": round(total_value_usd, 2) if total_value_usd is not None else None,
             "balances": balances_with_value,
         }
 
