@@ -36,10 +36,13 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
 
         start = time.perf_counter()
+        response: Response | None = None
         try:
             response = await call_next(request)
+            return response
         finally:
             duration_ms = (time.perf_counter() - start) * 1000
+            status_code = response.status_code if isinstance(response, Response) else 500
             # Minimal access log to avoid leaking sensitive data
             logger.info(
                 json.dumps(
@@ -47,16 +50,15 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
                         "request_id": request_id,
                         "method": request.method,
                         "path": request.url.path,
-                        "status": getattr(response, "status_code", 500),
+                        "status": status_code,
                         "duration_ms": round(duration_ms, 2),
                         "client": request.client.host if request.client else None,
                     }
                 )
             )
-        # Ensure header is present on response
-        if isinstance(response, Response):
-            response.headers[self.header_name] = request_id
-        return response
+            # Ensure header is present on response
+            if isinstance(response, Response):
+                response.headers[self.header_name] = request_id
 
 
 class ErrorHandlingMiddleware(BaseHTTPMiddleware):
