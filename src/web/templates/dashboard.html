@@ -86,7 +86,9 @@
 <div class="card">
     <h2>Histórico de Valor da Carteira</h2>
     <p id="portfolio-history-empty" class="chart-placeholder" style="display:none;">Nenhum histórico disponível ainda.</p>
-    <canvas id="portfolio-history-chart" height="220" style="display:none;"></canvas>
+    <div id="portfolio-history-wrapper" class="chart-wrapper" style="display:none;">
+        <canvas id="portfolio-history-chart" height="220"></canvas>
+    </div>
 </div>
 
 <div class="card">
@@ -200,12 +202,13 @@ document.addEventListener('DOMContentLoaded', function () {
     ];
 
     async function fetchPortfolioHistory() {
+        const portfolioWrapper = document.getElementById('portfolio-history-wrapper');
         const portfolioCanvas = document.getElementById('portfolio-history-chart');
         const portfolioEmpty = document.getElementById('portfolio-history-empty');
         const assetContainer = document.getElementById('asset-charts-container');
         const assetEmpty = document.getElementById('asset-charts-empty');
 
-        if (!portfolioCanvas || !assetContainer || typeof Chart === 'undefined') {
+        if (!portfolioWrapper || !portfolioCanvas || !assetContainer || typeof Chart === 'undefined') {
             return;
         }
 
@@ -218,11 +221,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const portfolioData = Array.isArray(data.portfolio) ? data.portfolio : [];
             if (portfolioData.length === 0) {
-                portfolioCanvas.style.display = 'none';
+                portfolioWrapper.style.display = 'none';
                 portfolioEmpty.style.display = 'block';
             } else {
                 portfolioEmpty.style.display = 'none';
-                portfolioCanvas.style.display = 'block';
+                portfolioWrapper.style.display = 'block';
                 const labels = portfolioData.map(point => new Date(point.timestamp).toLocaleString('pt-BR'));
                 const values = portfolioData.map(point => Number(point.total_value_usd ?? 0));
 
@@ -284,9 +287,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     title.textContent = asset;
                     wrapper.appendChild(title);
 
+                    const chartWrapper = document.createElement('div');
+                    chartWrapper.className = 'chart-wrapper';
+
                     const canvas = document.createElement('canvas');
                     canvas.height = 220;
-                    wrapper.appendChild(canvas);
+                    chartWrapper.appendChild(canvas);
+
+                    wrapper.appendChild(chartWrapper);
 
                     assetContainer.appendChild(wrapper);
 
@@ -343,8 +351,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         } catch (error) {
             console.error('Erro ao carregar histórico da carteira', error);
-            if (portfolioCanvas) {
-                portfolioCanvas.style.display = 'none';
+            if (portfolioWrapper) {
+                portfolioWrapper.style.display = 'none';
             }
             if (portfolioEmpty) {
                 portfolioEmpty.textContent = `Não foi possível carregar o histórico da carteira: ${error.message}`;
