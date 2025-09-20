@@ -146,15 +146,16 @@ h1, h2, h3 {
     margin-top: 0;
 }
 
-.asset-chart canvas {
-    width: 100%;
+.chart-wrapper {
+    position: relative;
     height: 220px;
-    display: block;
+    margin-top: 1rem;
+    padding: 0;
 }
 
-#portfolio-history-chart {
+.chart-wrapper canvas {
     width: 100%;
-    height: 220px;
+    height: 100%;
     display: block;
 }
 
