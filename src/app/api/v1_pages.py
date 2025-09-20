@@ -26,10 +26,39 @@ async def get_dashboard_page(request: Request, db: Session = Depends(get_db)):
     Returns:
         A Jinja2 TemplateResponse for the dashboard page.
     """
-    # We will add context here later (e.g., last run, current balances)
     last_run = db.query(RebalanceRun).order_by(RebalanceRun.timestamp.desc()).first()
+
+    sorted_balances = []
+    if last_run is not None:
+        projected_balances = getattr(last_run, "projected_balances", None)
+
+        if isinstance(projected_balances, dict):
+            def safe_value_usd(item: tuple[str, object]) -> float:
+                """Return a comparable USD value for ordering projected balances."""
+
+                _, details = item
+
+                if isinstance(details, dict):
+                    value = details.get("value_usd", 0.0)
+                else:
+                    value = 0.0
+
+                try:
+                    return float(value or 0.0)
+                except (TypeError, ValueError):
+                    return 0.0
+
+            sorted_balances = sorted(
+                projected_balances.items(), key=safe_value_usd, reverse=True
+            )
+
     return templates.TemplateResponse(
-        "dashboard.html", {"request": request, "last_run": last_run}
+        "dashboard.html",
+        {
+            "request": request,
+            "last_run": last_run,
+            "sorted_balances": sorted_balances,
+        },
     )
 
 
