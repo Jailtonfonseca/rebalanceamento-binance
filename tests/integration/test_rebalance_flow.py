@@ -126,11 +126,13 @@ async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_m
     # With the new logic, rebalancing is based on the eligible asset value ($90k), not total portfolio value ($100k)
     # Target values: BTC=54k, ETH=36k. Current: BTC=72k, ETH=18k.
     # Deltas: Sell 18k BTC, Buy 18k ETH.
+    assert sell_trade.estimated_value_base == pytest.approx(18000)
     assert sell_trade.estimated_value_usd == pytest.approx(18000)
     assert sell_trade.fee_cost_usd == pytest.approx(18.0)
 
     assert buy_trade is not None
     assert buy_trade.asset == "ETH"
+    assert buy_trade.estimated_value_base == pytest.approx(18000)
     assert buy_trade.estimated_value_usd == pytest.approx(18000)
     assert buy_trade.fee_cost_usd == pytest.approx(18.0)
 
@@ -156,6 +158,8 @@ async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_m
     assert db_run.total_value_usd_before == pytest.approx(100000.0)
     assert db_run.total_value_usd_after == pytest.approx(99964.0)
     assert db_run.projected_balances["BTC"]["quantity"] == pytest.approx(0.9)
+    assert db_run.trigger == "manual"
+    assert db_run.base_pair == "USDT"
 
 
 @pytest.mark.anyio

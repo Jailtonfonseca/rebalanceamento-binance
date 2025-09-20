@@ -20,6 +20,8 @@
     <p><strong>ID da Execução:</strong> {{ last_run.run_id }}</p>
     <p><strong>Data e Hora:</strong> {{ last_run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
     <p><strong>Status:</strong> <span class="status-{{ last_run.status.lower() }}">{{ last_run.status }}</span> {% if last_run.is_dry_run %}(Simulação){% endif %}</p>
+    <p><strong>Par Base:</strong> {{ last_run.base_pair }}</p>
+    <p><strong>Disparo:</strong> {% if last_run.trigger == 'scheduled' %}<span class="mode-live">Automático</span>{% else %}<span class="mode-dry">Manual</span>{% endif %}</p>
     <p><strong>Resumo:</strong> {{ last_run.summary_message }}</p>
     {% if last_run.total_fees_usd is not none %}
     <p><strong>Custo Total de Taxas (Estimado):</strong> ${{ "%.2f"|format(last_run.total_fees_usd) }}</p>
@@ -32,6 +34,7 @@
             <tr>
                 <th>Ativo</th>
                 <th>Nova Quantidade</th>
+                <th>Novo Valor ({{ last_run.base_pair }})</th>
                 <th>Novo Valor (USD)</th>
             </tr>
         </thead>
@@ -40,7 +43,15 @@
             <tr>
                 <td>{{ asset }}</td>
                 <td>{{ "%.8f"|format(details.quantity|float) }}</td>
-                <td>${{ "%.2f"|format(details.value_usd|float) }}</td>
+                {% set value_base = details.get('value_in_base', details.get('value_usd', 0)) %}
+                <td>{{ "%.2f"|format(value_base|float) }} {{ last_run.base_pair }}</td>
+                <td>
+                    {% if details.value_usd is not none %}
+                    ${{ "%.2f"|format(details.value_usd|float) }}
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -66,13 +77,16 @@
     <h2>Saldos Atuais</h2>
     <div id="balances-loading">Carregando saldos...</div>
     <div id="balances-content" style="display:none;">
-        <h3 id="total-balance-usd">$0.00</h3>
+        <h3 id="total-balance-base" class="balance-primary">0</h3>
+        <p id="total-balance-usd" class="balance-secondary"></p>
+        <p id="base-conversion-note" class="text-muted"></p>
         <table>
             <thead>
                 <tr>
                     <th>Ativo</th>
                     <th>Quantidade</th>
-                    <th>Valor (USD)</th>
+                    <th id="value-header-base">Valor (Base)</th>
+                    <th id="value-header-usd">Valor (USD)</th>
                 </tr>
             </thead>
             <tbody id="balances-table-body">
@@ -152,7 +166,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const contentDiv = document.getElementById('balances-content');
         const errorDiv = document.getElementById('balances-error');
         const tableBody = document.getElementById('balances-table-body');
-        const totalBalanceEl = document.getElementById('total-balance-usd');
+        const totalBalanceBaseEl = document.getElementById('total-balance-base');
+        const totalBalanceUsdEl = document.getElementById('total-balance-usd');
+        const baseConversionEl = document.getElementById('base-conversion-note');
+        const valueHeaderBase = document.getElementById('value-header-base');
 
         try {
             const response = await fetch('/api/v1/status/balances');
@@ -162,18 +179,46 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(data.error);
             }
 
-            totalBalanceEl.textContent = `$${data.total_value_usd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            tableBody.innerHTML = ''; // Clear existing rows
+            const basePair = data.base_pair || 'USDT';
+            const baseFormatter = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-            const sortedAssets = Object.keys(data.balances).sort((a, b) => data.balances[b].value_usd - data.balances[a].value_usd);
+            valueHeaderBase.textContent = `Valor (${basePair})`;
+
+            const totalBase = Number(data.total_value_in_base ?? 0);
+            totalBalanceBaseEl.textContent = `${baseFormatter.format(totalBase)} ${basePair}`;
+
+            if (typeof data.total_value_usd === 'number' && !Number.isNaN(data.total_value_usd)) {
+                totalBalanceUsdEl.textContent = `≈ ${currencyFormatter.format(data.total_value_usd)}`;
+                totalBalanceUsdEl.style.display = '';
+            } else {
+                totalBalanceUsdEl.textContent = '';
+                totalBalanceUsdEl.style.display = 'none';
+            }
+
+            if (data.base_to_usd_rate) {
+                baseConversionEl.textContent = `1 ${basePair} ≈ ${currencyFormatter.format(data.base_to_usd_rate)}`;
+            } else {
+                baseConversionEl.textContent = '';
+            }
+
+            tableBody.innerHTML = '';
+
+            const sortedAssets = Object.keys(data.balances).sort((a, b) => {
+                const assetA = data.balances[a] || {};
+                const assetB = data.balances[b] || {};
+                const valueA = assetA.value_usd ?? assetA.value_in_base ?? 0;
+                const valueB = assetB.value_usd ?? assetB.value_in_base ?? 0;
+                return valueB - valueA;
+            });
 
             for (const asset of sortedAssets) {
                 const balance = data.balances[asset];
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${asset}</td>
-                    <td>${balance.quantity}</td>
-                    <td>$${balance.value_usd.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td>${quantityFormatter.format(Number(balance.quantity))}</td>
+                    <td>${baseFormatter.format(Number(balance.value_in_base ?? 0))} ${basePair}</td>
+                    <td>${balance.value_usd !== undefined ? currencyFormatter.format(Number(balance.value_usd)) : '—'}</td>
                 `;
                 tableBody.appendChild(row);
             }

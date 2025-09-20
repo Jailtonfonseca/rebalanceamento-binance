@@ -16,6 +16,10 @@
                 {% if run.is_dry_run %}<span class="mode-dry">Simulação</span>
                 {% else %}<span class="mode-live">Real</span>{% endif %}
             </div>
+            <div class="summary-item"><strong>Execução:</strong><br>
+                {% if run.trigger == 'scheduled' %}<span class="mode-live">Automática</span>{% else %}<span class="mode-dry">Manual</span>{% endif %}<br>
+                <span class="summary-subtext">Par: {{ run.base_pair }}</span>
+            </div>
             <div class="summary-item summary-message"><strong>Resumo:</strong><br>{{ run.summary_message }}</div>
             <div class="summary-item toggle-icon">▼</div>
         </div>
@@ -65,6 +69,7 @@
                         <tr>
                             <th>Ativo</th>
                             <th>Nova Quantidade</th>
+                            <th>Novo Valor ({{ run.base_pair }})</th>
                             <th>Novo Valor (USD)</th>
                         </tr>
                     </thead>
@@ -73,7 +78,15 @@
                         <tr>
                             <td>{{ asset }}</td>
                             <td>{{ "%.8f"|format(details.quantity|float) }}</td>
-                            <td>${{ "%.2f"|format(details.value_usd|float) }}</td>
+                            {% set value_base = details.get('value_in_base', details.get('value_usd', 0)) %}
+                            <td>{{ "%.2f"|format(value_base|float) }} {{ run.base_pair }}</td>
+                            <td>
+                                {% if details.value_usd is not none %}
+                                ${{ "%.2f"|format(details.value_usd|float) }}
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -96,7 +109,7 @@
     .history-card { margin-bottom: 1rem; }
     .history-summary {
         display: grid;
-        grid-template-columns: 1.5fr 1fr 1fr 3fr auto;
+        grid-template-columns: 1.5fr 1fr 1fr 1.2fr 3fr auto;
         gap: 1rem;
         padding: 1rem;
         cursor: pointer;
@@ -110,6 +123,7 @@
         border-top: 1px solid #eee;
     }
     .details-section { margin-top: 1rem; }
+    .summary-subtext { font-size: 0.85rem; color: var(--secondary-color); }
 </style>
 
 {% block scripts %}

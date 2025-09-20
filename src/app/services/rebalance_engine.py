@@ -10,6 +10,11 @@ from typing import Dict, List, Set
 import logging
 from app.services.models import ProposedTrade
 from app.utils.helpers import adjust_to_step_size
+from app.utils.pricing import (
+    get_asset_base_value,
+    get_asset_usd_value,
+    resolve_base_to_usd_rate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -72,17 +77,22 @@ class RebalanceEngine:
 
         logger.debug(f"Preliminary assets for consideration: {preliminary_assets}")
 
+        base_to_usd = resolve_base_to_usd_rate(prices, base_pair)
+
         # 2. Calculate current portfolio value in the base pair (e.g., USD)
-        current_portfolio_values = {}
+        current_portfolio_values: Dict[str, float] = {}
         for asset in preliminary_assets:
             quantity = balances.get(asset, 0.0)
-            if asset == base_pair:
-                current_portfolio_values[asset] = quantity
-            else:
-                symbol = f"{asset}{base_pair}"
-                price = prices.get(symbol)
-                if price and quantity > 0:
-                    current_portfolio_values[asset] = quantity * price
+            if quantity == 0:
+                continue
+
+            price_in_base = get_asset_base_value(prices, asset, base_pair)
+            if price_in_base is None:
+                logger.debug("Skipping asset %s; missing %s pair price", asset, base_pair)
+                continue
+
+            value_in_base = quantity * price_in_base
+            current_portfolio_values[asset] = value_in_base
 
         if not current_portfolio_values:
             logger.warning("No assets with value found to rebalance.")
@@ -128,15 +138,22 @@ class RebalanceEngine:
             target_alloc_pct = target_allocations.get(asset, 0.0)
 
             delta_pct = target_alloc_pct - current_alloc_pct
-            delta_usd = (delta_pct / 100) * total_eligible_value
+            delta_value_base = (delta_pct / 100) * total_eligible_value
 
-            if abs(delta_usd) < min_trade_value_usd:
+            if base_to_usd is not None:
+                delta_value_threshold = abs(delta_value_base) * base_to_usd
+            else:
+                delta_value_threshold = abs(delta_value_base)
+
+            if delta_value_threshold < min_trade_value_usd:
                 continue
 
             symbol = f"{asset}{base_pair}"
-            price = prices.get(symbol)
+            price = get_asset_base_value(prices, asset, base_pair)
             if not price:
-                logger.warning(f"No price found for {symbol}. Skipping asset {asset}.")
+                logger.warning(
+                    f"No price found for {symbol}. Skipping asset {asset}."
+                )
                 continue
 
             symbol_info = exchange_info.get(symbol)
@@ -172,15 +189,18 @@ class RebalanceEngine:
             step_size = lot_size_filter["stepSize"]
             min_notional_value = float(min_notional_filter["minNotional"])
 
-            quantity_to_trade = abs(delta_usd) / price
+            quantity_to_trade = abs(delta_value_base) / price
             adjusted_quantity = adjust_to_step_size(quantity_to_trade, step_size)
             final_trade_value = adjusted_quantity * price
 
             if adjusted_quantity <= 0 or final_trade_value < min_notional_value:
                 continue
 
-            fee_cost = final_trade_value * (trade_fee_pct / 100)
-            side = "BUY" if delta_usd > 0 else "SELL"
+            value_usd = (
+                final_trade_value * base_to_usd if base_to_usd is not None else final_trade_value
+            )
+            fee_cost = value_usd * (trade_fee_pct / 100)
+            side = "BUY" if delta_value_base > 0 else "SELL"
             reason = f"Target: {target_alloc_pct:.2f}%, Current: {current_alloc_pct:.2f}%, Delta: {delta_pct:.2f}%"
 
             proposed_trades.append(
@@ -189,13 +209,14 @@ class RebalanceEngine:
                     asset=asset,
                     side=side,
                     quantity=adjusted_quantity,
-                    estimated_value_usd=final_trade_value,
+                    estimated_value_base=final_trade_value,
+                    estimated_value_usd=value_usd,
                     reason=reason,
                     fee_cost_usd=fee_cost,
                 )
             )
             logger.info(
-                f"Proposing trade: {side} {adjusted_quantity} {asset} for ~${final_trade_value:,.2f} (Fee: ~${fee_cost:,.2f})"
+                f"Proposing trade: {side} {adjusted_quantity} {asset} for ~${value_usd:,.2f} (Fee: ~${fee_cost:,.2f})"
             )
 
         # 4. Calculate projected balances
@@ -209,7 +230,7 @@ class RebalanceEngine:
 
         for trade in proposed_trades:
             asset_qty_change = trade.quantity
-            base_qty_change = trade.estimated_value_usd
+            base_qty_change = trade.estimated_value_base
 
             if trade.side == "BUY":
                 # Assume fee is paid from the received asset (Binance standard)
@@ -227,13 +248,16 @@ class RebalanceEngine:
         # 5. Format projected balances with USD values
         final_projected_balances = {}
         for asset, qty in projected_balances.items():
-            price = (
-                prices.get(f"{asset}{base_pair}", 1.0) if asset != base_pair else 1.0
-            )
-            final_projected_balances[asset] = {
+            price_in_base = get_asset_base_value(prices, asset, base_pair) or 1.0
+            entry = {
                 "quantity": qty,
-                "value_usd": qty * price,
+                "value_in_base": qty * price_in_base,
             }
+            price_in_usd = get_asset_usd_value(prices, asset, base_pair)
+            if price_in_usd is not None:
+                entry["value_usd"] = qty * price_in_usd
+
+            final_projected_balances[asset] = entry
 
         return {
             "proposed_trades": proposed_trades,

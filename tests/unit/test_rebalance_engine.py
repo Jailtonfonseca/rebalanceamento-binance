@@ -81,10 +81,12 @@ def test_simple_rebalance(rebalance_engine, mock_data):
 
     # Based on eligible value of 95k: Sell 18k BTC, Buy 8.5k ETH
     assert sell_trade.asset == "BTC"
+    assert sell_trade.estimated_value_base == pytest.approx(18000, rel=1e-3)
     assert sell_trade.estimated_value_usd == pytest.approx(18000, rel=1e-3)
     assert sell_trade.quantity == pytest.approx(18000 / 50000, rel=1e-3)
 
     assert buy_trade.asset == "ETH"
+    assert buy_trade.estimated_value_base == pytest.approx(8500, rel=1e-3)
     assert buy_trade.estimated_value_usd == pytest.approx(8500, rel=1e-3)
     assert buy_trade.quantity == pytest.approx(8500 / 2000, rel=1e-3)
 
@@ -181,5 +183,6 @@ def test_new_asset_to_buy(rebalance_engine, mock_data):
     assert buy_bnb_trade is not None
     assert buy_bnb_trade.side == "BUY"
     # Target value is 10% of eligible value (95k) = 9.5k
+    assert buy_bnb_trade.estimated_value_base == pytest.approx(9500, rel=1e-3)
     assert buy_bnb_trade.estimated_value_usd == pytest.approx(9500, rel=1e-3)
     assert buy_bnb_trade.quantity == pytest.approx(9500 / 300.0, rel=1e-3)
