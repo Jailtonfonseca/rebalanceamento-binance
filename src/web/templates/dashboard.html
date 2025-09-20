@@ -193,6 +193,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
     const quantityFormatter = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 8 });
     const activeAssetCharts = [];
+    let portfolioChart = null;
+    const DEFAULT_CHART_HEIGHT = 220;
+    const supportsResizeObserver = typeof ResizeObserver !== 'undefined';
 
     function parseNumber(value) {
         if (value === null || value === undefined) {
@@ -218,10 +221,63 @@ document.addEventListener('DOMContentLoaded', function () {
         return numericValue === null ? '—' : quantityFormatter.format(numericValue);
     }
 
+    function detachCanvasObserver(canvas) {
+        if (!canvas) {
+            return;
+        }
+        const observer = canvas._chartSizeObserver;
+        if (observer && typeof observer.disconnect === 'function') {
+            observer.disconnect();
+        }
+        delete canvas._chartSizeObserver;
+    }
+
+    function enforceCanvasSize(canvas) {
+        if (!canvas) {
+            return;
+        }
+        const parent = canvas.parentElement;
+        if (!parent) {
+            return;
+        }
+
+        const applySize = () => {
+            const parentHeight = parent.clientHeight || DEFAULT_CHART_HEIGHT;
+            const parentWidth = parent.clientWidth || parent.offsetWidth || canvas.width || 0;
+            canvas.style.setProperty('height', `${parentHeight}px`, 'important');
+            if (parentWidth > 0) {
+                canvas.style.setProperty('width', `${parentWidth}px`, 'important');
+            }
+        };
+
+        applySize();
+
+        if (!supportsResizeObserver) {
+            return;
+        }
+
+        detachCanvasObserver(canvas);
+
+        const observer = new ResizeObserver(() => {
+            applySize();
+        });
+        observer.observe(parent);
+        canvas._chartSizeObserver = observer;
+    }
+
+    function destroyPortfolioChart() {
+        if (portfolioChart) {
+            detachCanvasObserver(portfolioChart.canvas);
+            portfolioChart.destroy();
+            portfolioChart = null;
+        }
+    }
+
     function destroyAssetCharts() {
         while (activeAssetCharts.length > 0) {
             const chart = activeAssetCharts.pop();
             if (chart) {
+                detachCanvasObserver(chart.canvas);
                 chart.destroy();
             }
         }
@@ -265,6 +321,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const portfolioData = Array.isArray(data.portfolio) ? data.portfolio : [];
             if (portfolioData.length === 0) {
+                destroyPortfolioChart();
                 portfolioWrapper.style.display = 'none';
                 if (portfolioEmpty && portfolioEmpty.dataset.defaultText !== undefined) {
                     portfolioEmpty.textContent = portfolioEmpty.dataset.defaultText;
@@ -273,18 +330,15 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 portfolioEmpty.style.display = 'none';
                 portfolioWrapper.style.display = 'block';
+                destroyPortfolioChart();
+                enforceCanvasSize(portfolioCanvas);
                 const labels = portfolioData.map(point => new Date(point.timestamp).toLocaleString('pt-BR'));
                 const values = portfolioData.map(point => {
                     const numericValue = parseNumber(point.total_value_usd);
                     return numericValue ?? 0;
                 });
 
-                const existingPortfolioChart = Chart.getChart(portfolioCanvas);
-                if (existingPortfolioChart) {
-                    existingPortfolioChart.destroy();
-                }
-
-                new Chart(portfolioCanvas.getContext('2d'), {
+                portfolioChart = new Chart(portfolioCanvas.getContext('2d'), {
                     type: 'line',
                     data: {
                         labels,
@@ -298,26 +352,27 @@ document.addEventListener('DOMContentLoaded', function () {
                             pointRadius: 3,
                         }]
                     },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    ticks: {
-                                        callback: (value) => formatCurrencyValue(value, { fallbackZero: true }),
-                                    }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                ticks: {
+                                    callback: (value) => formatCurrencyValue(value, { fallbackZero: true }),
                                 }
-                            },
-                            plugins: {
-                                legend: { display: false },
-                                tooltip: {
-                                    callbacks: {
-                                        label: (context) => `Valor: ${formatCurrencyValue(context.parsed.y, { fallbackZero: true })}`,
-                                    }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `Valor: ${formatCurrencyValue(context.parsed.y, { fallbackZero: true })}`,
                                 }
                             }
                         }
-                    });
+                    }
+                });
+                enforceCanvasSize(portfolioCanvas);
             }
 
             const assetEntries = Object.entries(data.assets || {}).filter(([, points]) => Array.isArray(points) && points.length > 0);
@@ -362,6 +417,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     const paletteEntry = chartPalette[colorIndex % chartPalette.length];
                     colorIndex += 1;
 
+                    enforceCanvasSize(canvas);
+
                     const chartInstance = new Chart(canvas.getContext('2d'), {
                         type: 'line',
                         data: {
@@ -404,11 +461,13 @@ document.addEventListener('DOMContentLoaded', function () {
                             }
                         }
                     });
+                    enforceCanvasSize(canvas);
                     activeAssetCharts.push(chartInstance);
                 }
             }
         } catch (error) {
             console.error('Erro ao carregar histórico da carteira', error);
+            destroyPortfolioChart();
             destroyAssetCharts();
             if (portfolioWrapper) {
                 portfolioWrapper.style.display = 'none';
