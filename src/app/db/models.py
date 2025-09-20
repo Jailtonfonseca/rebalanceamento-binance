@@ -6,7 +6,7 @@ functions for database initialization and dependency injection.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     create_engine,
     Column,
@@ -17,11 +17,12 @@ from sqlalchemy import (
     Text,
     Boolean,
 )
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base, validates
 from sqlalchemy.types import TypeDecorator
 from sqlalchemy.engine import Dialect
 
 from app.services.config_manager import DATA_DIR
+from app.utils.time import utc_now
 
 # --- Database Setup ---
 DB_FILE = DATA_DIR / "rebalancer.db"
@@ -96,7 +97,7 @@ class RebalanceRun(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     run_id = Column(String, unique=True, index=True, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     status = Column(String, nullable=False)
     is_dry_run = Column(Boolean, nullable=False)
 
@@ -110,6 +111,18 @@ class RebalanceRun(Base):
     errors = Column(Json, nullable=True)
     projected_balances = Column(Json, nullable=True)
     total_fees_usd = Column(Float, nullable=True)
+
+    @validates("timestamp")
+    def _ensure_timezone(self, key: str, value: datetime | None) -> datetime | None:
+        """Normalise timestamps to UTC-aware datetimes."""
+
+        if value is None:
+            return value
+
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+
+        return value.astimezone(timezone.utc)
 
 
 # --- DB Initialization ---
