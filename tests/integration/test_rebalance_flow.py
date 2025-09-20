@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -12,6 +13,7 @@ from app.services.config_manager import (
     CMCSettings,
 )
 from app.api.v1_rebalance import run_rebalance_manually
+from app.api.v1_history import get_portfolio_statistics
 
 # --- Test Database Setup ---
 DATABASE_URL = "sqlite:///:memory:"
@@ -151,4 +153,70 @@ async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_m
     assert len(db_run.trades_executed) == 2
     assert db_run.trades_executed[0]["asset"] == "BTC"
     assert db_run.total_fees_usd == pytest.approx(36.0)
+    assert db_run.total_value_usd_before == pytest.approx(100000.0)
+    assert db_run.total_value_usd_after == pytest.approx(99964.0)
     assert db_run.projected_balances["BTC"]["quantity"] == pytest.approx(0.9)
+
+
+@pytest.mark.anyio
+async def test_get_portfolio_statistics(db_session):
+    """Ensure the portfolio statistics endpoint aggregates data correctly."""
+
+    run1 = RebalanceRun(
+        run_id="run-1",
+        timestamp=datetime(2024, 1, 1, 12, 0, 0),
+        status="SUCCESS",
+        is_dry_run=False,
+        summary_message="Primeira execução",
+        trades_executed=[],
+        errors=[],
+        total_fees_usd=0.0,
+        projected_balances={
+            "BTC": {"quantity": 1.0, "value_usd": 50000.0},
+            "USDT": {"quantity": 1000.0, "value_usd": 1000.0},
+        },
+        total_value_usd_before=51000.0,
+        total_value_usd_after=51000.0,
+    )
+
+    run2 = RebalanceRun(
+        run_id="run-2",
+        timestamp=datetime(2024, 1, 2, 12, 0, 0),
+        status="SUCCESS",
+        is_dry_run=False,
+        summary_message="Segunda execução",
+        trades_executed=[],
+        errors=[],
+        total_fees_usd=0.0,
+        projected_balances={
+            "BTC": {"quantity": 0.8, "value_usd": 40000.0},
+            "ETH": {"quantity": 5.0, "value_usd": 15000.0},
+            "USDT": {"quantity": 2000.0, "value_usd": 2000.0},
+        },
+        total_value_usd_before=51000.0,
+        total_value_usd_after=None,  # Force fallback to sum projected balances
+    )
+
+    db_session.add_all([run1, run2])
+    db_session.commit()
+
+    stats = await get_portfolio_statistics(db=db_session)
+
+    assert "portfolio" in stats and "assets" in stats
+    assert len(stats["portfolio"]) == 2
+    assert stats["portfolio"][0]["total_value_usd"] == pytest.approx(51000.0)
+    assert stats["portfolio"][1]["total_value_usd"] == pytest.approx(57000.0)
+    assert stats["portfolio"][0]["timestamp"].endswith("Z")
+
+    btc_history = stats["assets"].get("BTC")
+    assert btc_history is not None and len(btc_history) == 2
+    assert btc_history[0]["value_usd"] == pytest.approx(50000.0)
+    assert btc_history[1]["quantity"] == pytest.approx(0.8)
+
+    eth_history = stats["assets"].get("ETH")
+    assert eth_history is not None and len(eth_history) == 1
+    assert eth_history[0]["value_usd"] == pytest.approx(15000.0)
+
+    usdt_history = stats["assets"].get("USDT")
+    assert usdt_history is not None and len(usdt_history) == 2
+    assert usdt_history[1]["value_usd"] == pytest.approx(2000.0)

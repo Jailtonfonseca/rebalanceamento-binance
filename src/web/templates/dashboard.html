@@ -83,9 +83,22 @@
     <div id="balances-error" style="display:none; color: var(--danger-color);"></div>
 </div>
 
+<div class="card">
+    <h2>Histórico de Valor da Carteira</h2>
+    <p id="portfolio-history-empty" class="chart-placeholder" style="display:none;">Nenhum histórico disponível ainda.</p>
+    <canvas id="portfolio-history-chart" height="220" style="display:none;"></canvas>
+</div>
+
+<div class="card">
+    <h2>Desempenho por Ativo</h2>
+    <p id="asset-charts-empty" class="chart-placeholder" style="display:none;">Nenhum histórico disponível para os ativos.</p>
+    <div id="asset-charts-container" class="asset-charts-grid"></div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const runBtn = document.getElementById('run-rebalance-btn');
@@ -152,8 +165,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const sortedAssets = Object.keys(data.balances).sort((a, b) => data.balances[b].value_usd - data.balances[a].value_usd);
 
+            const heldAssets = new Set();
+
             for (const asset of sortedAssets) {
                 const balance = data.balances[asset];
+                const valueUsd = Number(balance.value_usd);
+                const quantity = Number(balance.quantity);
+
+                if ((Number.isFinite(valueUsd) && valueUsd > 0) || (Number.isFinite(quantity) && quantity > 0)) {
+                    heldAssets.add(asset);
+                }
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${asset}</td>
@@ -166,14 +187,226 @@ document.addEventListener('DOMContentLoaded', function () {
             loadingDiv.style.display = 'none';
             contentDiv.style.display = 'block';
 
+            return heldAssets;
+
         } catch (error) {
             loadingDiv.style.display = 'none';
             errorDiv.textContent = `Não foi possível carregar os saldos: ${error.message}`;
             errorDiv.style.display = 'block';
+
+            return null;
         }
     }
 
-    fetchBalances();
+    const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+    const quantityFormatter = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 8 });
+    const chartPalette = [
+        { border: '#0d6efd', background: 'rgba(13, 110, 253, 0.12)' },
+        { border: '#20c997', background: 'rgba(32, 201, 151, 0.12)' },
+        { border: '#d63384', background: 'rgba(214, 51, 132, 0.12)' },
+        { border: '#fd7e14', background: 'rgba(253, 126, 20, 0.12)' },
+        { border: '#6610f2', background: 'rgba(102, 16, 242, 0.12)' },
+        { border: '#198754', background: 'rgba(25, 135, 84, 0.12)' },
+        { border: '#6c757d', background: 'rgba(108, 117, 125, 0.12)' },
+        { border: '#0dcaf0', background: 'rgba(13, 202, 240, 0.12)' },
+    ];
+
+    async function fetchPortfolioHistory(currentAssets = null) {
+        const portfolioCanvas = document.getElementById('portfolio-history-chart');
+        const portfolioEmpty = document.getElementById('portfolio-history-empty');
+        const assetContainer = document.getElementById('asset-charts-container');
+        const assetEmpty = document.getElementById('asset-charts-empty');
+
+        if (!portfolioCanvas || !assetContainer || typeof Chart === 'undefined') {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/v1/history/portfolio-stats');
+            if (!response.ok) {
+                throw new Error('Resposta inválida do servidor');
+            }
+            const data = await response.json();
+
+            const portfolioData = Array.isArray(data.portfolio) ? data.portfolio : [];
+            if (portfolioData.length === 0) {
+                portfolioCanvas.style.display = 'none';
+                portfolioEmpty.style.display = 'block';
+            } else {
+                portfolioEmpty.style.display = 'none';
+                portfolioCanvas.style.display = 'block';
+                const labels = portfolioData.map(point => new Date(point.timestamp).toLocaleString('pt-BR'));
+                const values = portfolioData.map(point => Number(point.total_value_usd ?? 0));
+
+                const existingPortfolioChart = Chart.getChart(portfolioCanvas);
+                if (existingPortfolioChart) {
+                    existingPortfolioChart.destroy();
+                }
+
+                new Chart(portfolioCanvas.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Valor da carteira (USD)',
+                            data: values,
+                            borderColor: '#0d6efd',
+                            backgroundColor: 'rgba(13, 110, 253, 0.12)',
+                            tension: 0.25,
+                            fill: true,
+                            pointRadius: 3,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                ticks: {
+                                    callback: (value) => currencyFormatter.format(value ?? 0),
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `Valor: ${currencyFormatter.format(context.parsed.y ?? 0)}`,
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const assetEntries = Object.entries(data.assets || {}).filter(([, points]) => Array.isArray(points) && points.length > 0);
+            const filteredAssetEntries = assetEntries.filter(([asset, points]) => {
+                if (currentAssets instanceof Set && currentAssets.size > 0 && !currentAssets.has(asset)) {
+                    return false;
+                }
+
+                return points.some(point => point.value_usd !== undefined && point.value_usd !== null);
+            });
+
+            assetContainer.innerHTML = '';
+
+            if (filteredAssetEntries.length === 0) {
+                assetEmpty.style.display = 'block';
+            } else {
+                assetEmpty.style.display = 'none';
+                let colorIndex = 0;
+                let chartsRendered = 0;
+
+                for (const [asset, points] of filteredAssetEntries) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'asset-chart';
+
+                    const title = document.createElement('h4');
+                    title.textContent = asset;
+                    wrapper.appendChild(title);
+
+                    const canvas = document.createElement('canvas');
+                    canvas.height = 220;
+                    wrapper.appendChild(canvas);
+
+                    const labels = points.map(point => new Date(point.timestamp).toLocaleString('pt-BR'));
+                    const values = points.map(point => {
+                        const value = point.value_usd;
+                        if (value === undefined || value === null) {
+                            return null;
+                        }
+                        const numericValue = Number(value);
+                        return Number.isFinite(numericValue) ? numericValue : null;
+                    });
+                    const quantities = points.map(point => point.quantity !== undefined && point.quantity !== null ? Number(point.quantity) : null);
+
+                    if (!values.some(value => value !== null && !Number.isNaN(value))) {
+                        continue;
+                    }
+
+                    assetContainer.appendChild(wrapper);
+                    chartsRendered += 1;
+
+                    const paletteEntry = chartPalette[colorIndex % chartPalette.length];
+                    colorIndex += 1;
+
+                    new Chart(canvas.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels,
+                            datasets: [{
+                                label: `Valor de ${asset} (USD)`,
+                                data: values,
+                                borderColor: paletteEntry.border,
+                                backgroundColor: paletteEntry.background,
+                                tension: 0.25,
+                                fill: true,
+                                pointRadius: 2.5,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    ticks: {
+                                        callback: (value) => currencyFormatter.format(value ?? 0),
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => {
+                                            const idx = context.dataIndex;
+                                            const value = context.parsed.y;
+                                            const parts = [];
+                                            if (value === null || Number.isNaN(value)) {
+                                                parts.push('Valor: n/d');
+                                            } else {
+                                                parts.push(`Valor: ${currencyFormatter.format(value)}`);
+                                            }
+                                            const quantity = quantities[idx];
+                                            if (quantity !== null) {
+                                                parts.push(`Quantidade: ${quantityFormatter.format(quantity)}`);
+                                            }
+                                            return parts;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                if (chartsRendered === 0) {
+                    assetEmpty.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao carregar histórico da carteira', error);
+            if (portfolioCanvas) {
+                portfolioCanvas.style.display = 'none';
+            }
+            if (portfolioEmpty) {
+                portfolioEmpty.textContent = `Não foi possível carregar o histórico da carteira: ${error.message}`;
+                portfolioEmpty.style.display = 'block';
+            }
+            if (assetContainer) {
+                assetContainer.innerHTML = '';
+            }
+            if (assetEmpty) {
+                assetEmpty.textContent = `Não foi possível carregar os gráficos dos ativos: ${error.message}`;
+                assetEmpty.style.display = 'block';
+            }
+        }
+    }
+
+    (async () => {
+        const currentAssets = await fetchBalances();
+        await fetchPortfolioHistory(currentAssets);
+    })();
 });
 </script>
 {% endblock %}
