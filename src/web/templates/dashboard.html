@@ -39,21 +39,31 @@
             </tr>
         </thead>
         <tbody>
-            {% for asset, details in last_run.projected_balances.items()|sort(attribute='1.value_usd', reverse=true) %}
+            {% set rows = sorted_balances or [] %}
+            {% if rows|length == 0 %}
+            <tr>
+                <td colspan="4">Sem dados de saldos projetados.</td>
+            </tr>
+            {% else %}
+            {% for asset, details in rows %}
+            {% set details_map = details if details is mapping else {} %}
+            {% set quantity = details_map.get('quantity', 0) %}
+            {% set value_usd = details_map.get('value_usd') %}
+            {% set value_base = details_map.get('value_in_base', value_usd or 0) %}
             <tr>
                 <td>{{ asset }}</td>
-                <td>{{ "%.8f"|format(details.quantity|float) }}</td>
-                {% set value_base = details.get('value_in_base', details.get('value_usd', 0)) %}
+                <td>{{ "%.8f"|format(quantity|float) }}</td>
                 <td>{{ "%.2f"|format(value_base|float) }} {{ last_run.base_pair }}</td>
                 <td>
-                    {% if details.value_usd is not none %}
-                    ${{ "%.2f"|format(details.value_usd|float) }}
+                    {% if value_usd is not none %}
+                    ${{ "%.2f"|format(value_usd|float) }}
                     {% else %}
                     —
                     {% endif %}
                 </td>
             </tr>
             {% endfor %}
+            {% endif %}
         </tbody>
     </table>
     {% endif %}
