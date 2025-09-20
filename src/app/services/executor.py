@@ -100,10 +100,16 @@ class RebalanceExecutor:
                 f"--- Starting Rebalance Run (ID: {run_id}, Dry Run: {is_dry_run}) ---"
             )
 
+            total_value_before: float | None = None
+
             try:
                 # 1. Fetch all necessary data
                 balances = await self.binance_client.get_account_balances()
                 all_prices = await self.binance_client.get_all_prices()
+
+                total_value_before = self._calculate_portfolio_value(
+                    balances, all_prices
+                )
 
                 # Create a list of all potential symbols we might need info for
                 potential_symbols = {
@@ -130,6 +136,11 @@ class RebalanceExecutor:
                     trade_fee_pct=self.config.trade_fee_pct,
                 )
 
+                projected_balances = engine_result["projected_balances"]
+                total_value_after = self._calculate_total_from_projected(
+                    projected_balances
+                )
+
                 proposed_trades = engine_result["proposed_trades"]
                 if not proposed_trades:
                     message = (
@@ -140,18 +151,28 @@ class RebalanceExecutor:
                         status="SUCCESS",
                         message=message,
                         trades=[],
-                        projected_balances=engine_result["projected_balances"],
+                        projected_balances=projected_balances,
                     )
-                    self._save_result(result, is_dry_run)
+                    self._save_result(
+                        result,
+                        is_dry_run,
+                        total_value_usd_before=total_value_before,
+                        total_value_usd_after=total_value_after,
+                    )
                     return result
 
                 # 3. Execute or simulate trades
                 result = await self._execute_plan(proposed_trades, run_id, is_dry_run)
 
                 # 4. Add final data to result and save to the database
-                result.projected_balances = engine_result["projected_balances"]
+                result.projected_balances = projected_balances
                 result.total_fees_usd = engine_result["total_fees_usd"]
-                self._save_result(result, is_dry_run)
+                self._save_result(
+                    result,
+                    is_dry_run,
+                    total_value_usd_before=total_value_before,
+                    total_value_usd_after=total_value_after,
+                )
 
                 logger.info(f"--- Finished Rebalance Run (ID: {run_id}) ---")
                 return result
@@ -164,7 +185,10 @@ class RebalanceExecutor:
                     run_id=run_id, status="FAILED", message=str(e), trades=[]
                 )
                 self._save_result(
-                    result, is_dry_run=True
+                    result,
+                    is_dry_run=True,
+                    total_value_usd_before=total_value_before,
+                    total_value_usd_after=None,
                 )  # Always save failed runs as "dry"
                 raise
 
@@ -238,12 +262,71 @@ class RebalanceExecutor:
             errors=errors,
         )
 
-    def _save_result(self, result: RebalanceResult, is_dry_run: bool):
+    def _calculate_portfolio_value(
+        self, balances: dict[str, float], prices: dict[str, float]
+    ) -> float | None:
+        """Calculates the total portfolio value using the provided balances."""
+
+        if not balances:
+            return None
+
+        total_value = 0.0
+        for asset, quantity in balances.items():
+            if asset == self.config.base_pair:
+                total_value += quantity
+                continue
+
+            symbol = f"{asset}{self.config.base_pair}"
+            price = prices.get(symbol)
+            if price is None:
+                logger.debug(
+                    "Skipping asset %s in total calculation; missing price for %s",
+                    asset,
+                    symbol,
+                )
+                continue
+            total_value += quantity * price
+
+        return total_value
+
+    @staticmethod
+    def _calculate_total_from_projected(
+        projected_balances: dict | None,
+    ) -> float | None:
+        """Calculates the total USD value from projected balances."""
+
+        if projected_balances is None:
+            return None
+
+        if not projected_balances:
+            return 0.0
+
+        total_value = 0.0
+        for details in projected_balances.values():
+            if not isinstance(details, dict):
+                continue
+            value = details.get("value_usd")
+            if value is None:
+                continue
+            total_value += float(value)
+
+        return total_value
+
+    def _save_result(
+        self,
+        result: RebalanceResult,
+        is_dry_run: bool,
+        *,
+        total_value_usd_before: float | None = None,
+        total_value_usd_after: float | None = None,
+    ):
         """Saves the result of a rebalancing run to the database.
 
         Args:
             result: The RebalanceResult object from the execution.
             is_dry_run: A boolean indicating if the run was a simulation.
+            total_value_usd_before: Total portfolio value before the run, if known.
+            total_value_usd_after: Total projected portfolio value after the run, if known.
         """
         db_run = RebalanceRun(
             run_id=result.run_id,
@@ -255,6 +338,8 @@ class RebalanceExecutor:
             errors=result.errors,
             total_fees_usd=result.total_fees_usd,
             projected_balances=result.projected_balances,
+            total_value_usd_before=total_value_usd_before,
+            total_value_usd_after=total_value_usd_after,
         )
         self.db.add(db_run)
         self.db.commit()
