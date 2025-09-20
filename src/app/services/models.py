@@ -10,6 +10,7 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from app.utils.time import utc_now
 
 class ProposedTrade(BaseModel):
     """Represents a single trade calculated by the rebalancing engine.
@@ -43,25 +44,24 @@ class ProposedTrade(BaseModel):
 class RebalanceResult(BaseModel):
     """Represents the outcome of a rebalancing execution.
 
-        This model captures all relevant information about a completed rebalancing
-        run, including its status, a summary message, and lists of executed
-    ator
+    This model captures all relevant information about a completed rebalancing
+    run, including its status, a summary message, and lists of executed or
     simulated trades and any errors encountered.
 
-        Attributes:
-            run_id: A unique identifier for the rebalancing run.
-            timestamp: The UTC timestamp when the run was initiated.
-            status: The final status of the run.
-            message: A human-readable summary of the run's outcome.
-            trades: A list of trades that were simulated or executed.
-            errors: A list of any errors that occurred during execution.
-            total_fees_usd: The total estimated cost of all trade fees in USD.
-            projected_balances: A dictionary of what the new balances would be
-                               after the rebalance.
+    Attributes:
+        run_id: A unique identifier for the rebalancing run.
+        timestamp: The UTC timestamp when the run was initiated.
+        status: The final status of the run.
+        message: A human-readable summary of the run's outcome.
+        trades: A list of trades that were simulated or executed.
+        errors: A list of any errors that occurred during execution.
+        total_fees_usd: The total estimated cost of all trade fees in USD.
+        projected_balances: A dictionary of what the new balances would be
+            after the rebalance.
     """
 
     run_id: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
     status: Literal["DRY_RUN", "SUCCESS", "PARTIAL_SUCCESS", "FAILED"]
     message: str = Field(description="A summary of the rebalancing run.")
     trades: List[ProposedTrade] = Field(
