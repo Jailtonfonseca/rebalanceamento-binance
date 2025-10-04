@@ -1,21 +1,47 @@
 # Crypto Portfolio Rebalancing Bot
 
-![Crypto Rebalancing Bot Dashboard](path/to/your/image.png)
+![Crypto Rebalancing Bot Dashboard](docs/images/dashboard-page.png)
 
-This repository contains a fully-featured, containerized bot to automatically rebalance your cryptocurrency portfolio on Binance based on target allocations and market data from CoinMarketCap.
+This repository contains a fully-featured, containerized bot to automatically rebalance your cryptocurrency portfolio on Binance. It also includes a tool to simulate triangular arbitrage opportunities.
 
-It provides a simple web interface for configuration, status monitoring, and manual control.
+It provides a simple, secure web interface for configuration, status monitoring, and manual control.
 
 ## Features
 
+- **Secure First-Run Setup**: On the first launch, you are required to create a secure admin username and password.
+- **JWT-Based Authentication**: The web UI is protected by a robust session management system.
 - **Web UI**: Easy-to-use interface for all configuration, served directly from the container.
-- **Flexible Strategies**: Rebalance periodically (e.g., every 24 hours) or when portfolio allocations drift past a configurable threshold.
+- **Arbitrage Simulator**: A dedicated page to scan for and display potential triangular arbitrage opportunities on Binance.
+- **Flexible Rebalancing Strategies**: Rebalance periodically (e.g., every 24 hours) or when portfolio allocations drift past a configurable threshold.
 - **Dry Run Mode**: Simulate rebalancing runs without executing any real trades to see the plan first.
 - **Binance Integration**: Connects to your Binance account to read balances, get prices, and execute market orders.
 - **CoinMarketCap Integration**: Filters your portfolio against top-ranked assets to avoid rebalancing low-quality or delisted coins.
-- **Secure**: API keys are encrypted at rest. The bot never exposes your keys, not even in the UI.
+- **Secure**: API keys are encrypted at rest using a master key. The bot never exposes your keys, not even in the UI.
 - **Persistent**: All configuration and history are saved to a local `./data` directory, surviving container restarts.
 - **Dockerized**: Runs in a single, lightweight Docker container for easy deployment.
+
+---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><strong>Setup Page</strong></td>
+    <td align="center"><strong>Login Page</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/setup-page.png" alt="Setup Page" width="400"></td>
+    <td><img src="docs/images/login-page.png" alt="Login Page" width="400"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Dashboard</strong></td>
+    <td align="center"><strong>Arbitrage Simulator</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/dashboard-page.png" alt="Dashboard" width="400"></td>
+    <td><img src="docs/images/arbitrage-page.png" alt="Arbitrage Simulator" width="400"></td>
+  </tr>
+</table>
 
 ---
 
@@ -74,27 +100,28 @@ Now you can run the container in detached mode:
 docker-compose up -d
 ```
 
-### 4. Access the UI
+### 4. Initial Application Setup
 
 Once the container is running, open your web browser and navigate to:
 
 **http://localhost:8080**
 
-The default login credentials are:
-- **Username**: `admin`
-- **Password**: `admin`
+On your first visit, you will be redirected to the setup page to create your secure admin username and password.
 
-You should change the password immediately via the Configuration page.
+![Initial Setup Page](docs/images/setup-page.png)
+
+After completing the setup, you will be redirected to the login page. Use your new credentials to log in.
 
 ---
 
 ## Usage
 
-The web interface has three main sections:
+The web interface has four main sections:
 
 - **Dashboard**: Shows the status of the last rebalance run, your current portfolio balances (with their approximate USD value), and allows you to manually trigger a live or dry run.
 - **Configuration**: The main settings page. Here you can set your API keys, change your password, define your rebalancing strategy, set your target portfolio allocations, and more.
 - **History**: Displays a table of all past rebalancing runs, whether they were successful, and what trades were made.
+- **Arbitrage**: A simulator to find potential triangular arbitrage opportunities on Binance.
 
 ---
 
