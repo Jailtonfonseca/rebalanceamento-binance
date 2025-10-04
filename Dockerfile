@@ -1,6 +1,6 @@
 # --- Stage 1: Builder ---
 # This stage installs dependencies into a virtual environment.
-FROM python:3.11-slim as builder
+FROM python:3.12-slim as builder
 
 # Set up a non-root user
 RUN useradd --create-home --shell /bin/bash appuser
@@ -11,13 +11,13 @@ RUN python -m venv /home/appuser/venv
 ENV PATH="/home/appuser/venv/bin:$PATH"
 
 # Copy and install requirements
-COPY --chown=appuser:appuser requirements.txt .
+COPY --chown=appuser:appuser requirements*.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 
 # --- Stage 2: Final Application Image ---
 # This stage copies the installed dependencies and source code to a clean base image.
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
