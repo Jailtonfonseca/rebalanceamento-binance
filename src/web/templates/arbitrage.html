@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<style>
+    #arbitrage-table tbody tr {
+        transition: background-color 0.3s ease;
+    }
+    #arbitrage-table tbody tr:hover {
+        background-color: #f1f1f1;
+    }
+    .loader {
+        border: 4px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 4px solid #3498db;
+        width: 40px;
+        height: 40px;
+        animation: spin 2s linear infinite;
+        margin: 20px auto;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Arbitrage Opportunities</h2>
+                    <p class="card-subtitle text-muted">
+                        Scanning for triangular arbitrage opportunities on Binance. This is a simulation and does not execute trades.
+                    </p>
+                </div>
+                <div class="card-body">
+                    <div id="loading-indicator" class="text-center">
+                        <div class="loader"></div>
+                        <p>Scanning for opportunities...</p>
+                    </div>
+                    <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+                    <div id="opportunities-table" style="display: none;">
+                        <table class="table table-striped" id="arbitrage-table">
+                            <thead>
+                                <tr>
+                                    <th>Path</th>
+                                    <th>Estimated Profit (%)</th>
+                                    <th>Trade Rates</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                        <p class="text-muted small">
+                            * Profit calculation includes an estimated trading fee of {{ (TRADING_FEE * 100) }}% per trade.
+                        </p>
+                    </div>
+                     <div id="no-opportunities" class="text-center" style="display: none;">
+                        <p>No profitable arbitrage opportunities found at the moment.</p>
+                    </div>
+                </div>
+                <div class="card-footer text-right">
+                    <button id="rescan-button" class="btn btn-primary">
+                        <i class="fas fa-sync"></i> Rescan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const opportunitiesTable = document.getElementById('opportunities-table');
+    const noOpportunitiesDiv = document.getElementById('no-opportunities');
+    const errorMessageDiv = document.getElementById('error-message');
+    const tableBody = document.querySelector('#arbitrage-table tbody');
+    const rescanButton = document.getElementById('rescan-button');
+
+    async function fetchOpportunities() {
+        // Show loading state
+        loadingIndicator.style.display = 'block';
+        opportunitiesTable.style.display = 'none';
+        noOpportunitiesDiv.style.display = 'none';
+        errorMessageDiv.style.display = 'none';
+        rescanButton.disabled = true;
+
+        try {
+            const response = await fetch('/api/v1/arbitrage/opportunities');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+            }
+            const opportunities = await response.json();
+
+            // Clear previous results
+            tableBody.innerHTML = '';
+
+            if (opportunities.length > 0) {
+                opportunities.forEach(opp => {
+                    const row = document.createElement('tr');
+
+                    let ratesHtml = '';
+                    for (const [pair, rate] of Object.entries(opp.rates)) {
+                        ratesHtml += `<div>${pair}: ${rate}</div>`;
+                    }
+
+                    row.innerHTML = `
+                        <td>${opp.path}</td>
+                        <td>${opp.profit_margin_percent.toFixed(4)}%</td>
+                        <td>${ratesHtml}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+                opportunitiesTable.style.display = 'block';
+            } else {
+                noOpportunitiesDiv.style.display = 'block';
+            }
+
+        } catch (error) {
+            console.error('Error fetching arbitrage opportunities:', error);
+            errorMessageDiv.textContent = `Failed to fetch data: ${error.message}`;
+            errorMessageDiv.style.display = 'block';
+        } finally {
+            // Hide loading state
+            loadingIndicator.style.display = 'none';
+            rescanButton.disabled = false;
+        }
+    }
+
+    // Initial fetch
+    fetchOpportunities();
+
+    // Rescan button event listener
+    rescanButton.addEventListener('click', fetchOpportunities);
+});
+</script>
+{% endblock %}

@@ -2,7 +2,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.api import v1_config, v1_rebalance, v1_status, v1_pages, v1_history
+from app.api import v1_config, v1_rebalance, v1_status, v1_pages, v1_history, v1_arbitrage
 from app.services.config_manager import config_manager, AppSettings
 import logging
 from app.services.scheduler import scheduler, setup_scheduler
@@ -41,6 +41,7 @@ app.include_router(v1_config.router, prefix="/api/v1")
 app.include_router(v1_rebalance.router, prefix="/api/v1")
 app.include_router(v1_status.router, prefix="/api/v1")
 app.include_router(v1_history.router, prefix="/api/v1")
+app.include_router(v1_arbitrage.router, prefix="/api/v1")
 # This router serves the HTML pages
 app.include_router(v1_pages.router)
 

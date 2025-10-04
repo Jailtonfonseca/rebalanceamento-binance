@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.core.templating import templates
+from app.services.arbitrage_service import TRADING_FEE
 from app.services.config_manager import get_settings, AppSettings
 from app.db.models import get_db, RebalanceRun
 
@@ -108,4 +109,23 @@ async def get_history_page(request: Request, db: Session = Depends(get_db)):
 
     return templates.TemplateResponse(
         "history.html", {"request": request, "history": history}
+    )
+
+
+@router.get("/arbitrage")
+async def get_arbitrage_page(request: Request):
+    """Serves the arbitrage simulator page.
+
+    Args:
+        request: The incoming FastAPI request.
+
+    Returns:
+        A Jinja2 TemplateResponse for the arbitrage page.
+    """
+    return templates.TemplateResponse(
+        "arbitrage.html",
+        {
+            "request": request,
+            "TRADING_FEE": TRADING_FEE,
+        },
     )
