@@ -26,6 +26,10 @@ ENV DATA_DIR /data
 
 # Set up a non-root user
 RUN useradd --create-home --shell /bin/bash appuser
+
+# Create and set permissions for the data directory
+RUN mkdir -p /data && chown -R appuser:appuser /data
+
 USER appuser
 
 # Copy the virtual environment from the builder stage
