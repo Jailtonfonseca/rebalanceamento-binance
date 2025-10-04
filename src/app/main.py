@@ -1,8 +1,12 @@
 from pathlib import Path
-from fastapi import FastAPI
+from pathlib import Path
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.responses import RedirectResponse
 
-from app.api import v1_config, v1_rebalance, v1_status, v1_pages, v1_history, v1_arbitrage
+from app.api import v1_config, v1_rebalance, v1_status, v1_pages, v1_history, v1_arbitrage, v1_setup, v1_auth
+from app.core.security import decode_access_token
 from app.services.config_manager import config_manager, AppSettings
 import logging
 from app.services.scheduler import scheduler, setup_scheduler
@@ -19,10 +23,56 @@ app = FastAPI(
     version="1.1.0",
 )
 
+# --- Middleware for Auth and First-Run Setup ---
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
+        settings = config_manager.get_settings()
+
+        # Define paths that are always allowed (public)
+        public_paths = [
+            "/login",
+            "/logout",
+            "/setup",
+            "/api/v1/setup",
+            "/api/v1/auth/login",
+            "/static",
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+        ]
+        is_public_path = any(request.url.path.startswith(p) for p in public_paths)
+
+        # Add user to request state so it's available in templates
+        request.state.user = None
+
+        # 1. First-run setup check: If not configured, redirect to setup page
+        if not settings.is_configured and not is_public_path:
+            return RedirectResponse(url="/setup")
+
+        # 2. Authentication check for protected routes
+        if settings.is_configured and not is_public_path:
+            token = request.cookies.get("access_token")
+            if not token:
+                return RedirectResponse(url="/login")
+
+            username = decode_access_token(token)
+            if not username or username != settings.admin_user:
+                response = RedirectResponse(url="/login")
+                response.delete_cookie("access_token")
+                return response
+
+            request.state.user = username
+
+        response = await call_next(request)
+        return response
+
+
 # --- Prometheus Metrics ---
 Instrumentator().instrument(app).expose(app)
 
 # --- Middlewares ---
+# The AuthMiddleware handles both setup and login checks.
+app.add_middleware(AuthMiddleware)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(ErrorHandlingMiddleware)
 
@@ -42,6 +92,8 @@ app.include_router(v1_rebalance.router, prefix="/api/v1")
 app.include_router(v1_status.router, prefix="/api/v1")
 app.include_router(v1_history.router, prefix="/api/v1")
 app.include_router(v1_arbitrage.router, prefix="/api/v1")
+app.include_router(v1_setup.router, prefix="/api/v1")
+app.include_router(v1_auth.router, prefix="/api/v1/auth")
 # This router serves the HTML pages
 app.include_router(v1_pages.router)
 

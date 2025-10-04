@@ -109,6 +109,9 @@ class AppSettings(BaseModel):
     trade_fee_pct: float = Field(
         0.1, ge=0, le=5, description="The trading fee percentage."
     )
+    is_configured: bool = Field(
+        False, description="Flag to indicate if the initial setup has been completed."
+    )
 
     @field_validator("allocations")
     @classmethod
@@ -188,9 +191,8 @@ class ConfigManager:
     def _load_settings(self) -> AppSettings:
         """Loads settings from the JSON file.
 
-        If the file doesn't exist, it creates a default configuration with a
-        default 'admin' user and password. It also handles potential errors
-        during file parsing and validation, falling back to default settings.
+        If the file doesn't exist, it creates a default, unconfigured settings
+        object. If it exists, it performs a migration for older configs.
 
         Returns:
             An instance of AppSettings with the loaded configuration.
@@ -200,19 +202,27 @@ class ConfigManager:
                 f"Config file not found at {self.config_path}. Creating a default one."
             )
             DATA_DIR.mkdir(exist_ok=True)
-            # Set a default password for the first run
-            default_password = "admin"
-            hashed_password = bcrypt.hashpw(
-                default_password.encode("utf-8"), bcrypt.gensalt()
-            )
-            default_settings = AppSettings(password_hash=hashed_password)
+            # Create a default, unconfigured settings object.
+            # `is_configured` will be False by default, and password_hash will be None.
+            default_settings = AppSettings()
             self.save_settings(default_settings)
-            logger.info("Default username 'admin' with password 'admin' has been set.")
+            logger.info(
+                "New configuration file created. Application requires initial setup."
+            )
             return default_settings
 
         try:
             with open(self.config_path, "r") as f:
                 data = json.load(f)
+
+                # Migration for older configs: if a password hash exists but
+                # is_configured is missing, set is_configured to True.
+                if data.get("password_hash") and "is_configured" not in data:
+                    data["is_configured"] = True
+                    logger.info(
+                        "Migrating old configuration: setting 'is_configured' to True."
+                    )
+
                 # Pydantic doesn't handle bytes from JSON, so we need to decode them if they exist
                 if data.get("password_hash"):
                     data["password_hash"] = data["password_hash"].encode("latin1")
@@ -261,7 +271,7 @@ class ConfigManager:
 
         # Create a serializable dictionary, excluding plain text keys
         # and encoding bytes to strings for JSON
-        data_to_save = settings.dict(
+        data_to_save = settings.model_dump(
             exclude={"binance": {"api_key", "secret_key"}, "cmc": {"api_key"}}
         )
 

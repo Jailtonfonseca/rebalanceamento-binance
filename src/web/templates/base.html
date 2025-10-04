@@ -16,6 +16,12 @@
                 <li><a href="/history">Histórico</a></li>
                 <li><a href="/arbitrage">Arbitragem</a></li>
             </ul>
+            <ul class="user-menu">
+                {% if request.state.user %}
+                <li><span>Logado como: {{ request.state.user }}</span></li>
+                <li><a href="/logout" class="logout-link">Sair</a></li>
+                {% endif %}
+            </ul>
         </div>
     </nav>
 
