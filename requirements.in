@@ -15,4 +15,5 @@ mypy
 prometheus-fastapi-instrumentator
 pytest
 pytest-anyio
+python-jose[cryptography]
 trio

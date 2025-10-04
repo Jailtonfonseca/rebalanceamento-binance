@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Crypto Rebalancing Bot</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card login-card">
+        <div class="card-header">
+            <h1 class="card-title">Login</h1>
+            <p class="card-subtitle text-muted">Please log in to continue.</p>
+        </div>
+        <div class="card-body">
+            {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+            <form action="/api/v1/auth/login" method="post">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Login</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

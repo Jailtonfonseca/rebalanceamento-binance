@@ -7,6 +7,7 @@ public API schema.
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
+from starlette.responses import RedirectResponse
 
 from app.core.templating import templates
 from app.services.arbitrage_service import TRADING_FEE
@@ -40,15 +41,7 @@ def _sorted_projected_balances(projected_balances):
 
 @router.get("/")
 async def get_dashboard_page(request: Request, db: Session = Depends(get_db)):
-    """Serves the main dashboard page.
-
-    Args:
-        request: The incoming FastAPI request.
-        db: The database session, injected by FastAPI.
-
-    Returns:
-        A Jinja2 TemplateResponse for the dashboard page.
-    """
+    """Serves the main dashboard page."""
     last_run = db.query(RebalanceRun).order_by(RebalanceRun.timestamp.desc()).first()
 
     sorted_balances = []
@@ -70,16 +63,7 @@ async def get_dashboard_page(request: Request, db: Session = Depends(get_db)):
 async def get_config_page(
     request: Request, settings: AppSettings = Depends(get_settings)
 ):
-    """Serves the configuration page.
-
-    Args:
-        request: The incoming FastAPI request.
-        settings: The application settings, injected by FastAPI.
-
-    Returns:
-        A Jinja2 TemplateResponse for the configuration page.
-    """
-    # Pass the current settings to the template
+    """Serves the configuration page."""
     return templates.TemplateResponse(
         "config.html", {"request": request, "settings": settings.model_dump()}
     )
@@ -87,15 +71,7 @@ async def get_config_page(
 
 @router.get("/history")
 async def get_history_page(request: Request, db: Session = Depends(get_db)):
-    """Serves the rebalancing history page.
-
-    Args:
-        request: The incoming FastAPI request.
-        db: The database session, injected by FastAPI.
-
-    Returns:
-        A Jinja2 TemplateResponse for the history page.
-    """
+    """Serves the rebalancing history page."""
     history = (
         db.query(RebalanceRun)
         .order_by(RebalanceRun.timestamp.desc())
@@ -114,18 +90,40 @@ async def get_history_page(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/arbitrage")
 async def get_arbitrage_page(request: Request):
-    """Serves the arbitrage simulator page.
-
-    Args:
-        request: The incoming FastAPI request.
-
-    Returns:
-        A Jinja2 TemplateResponse for the arbitrage page.
-    """
+    """Serves the arbitrage simulator page."""
     return templates.TemplateResponse(
         "arbitrage.html",
         {
             "request": request,
             "TRADING_FEE": TRADING_FEE,
         },
+    )
+
+
+@router.get("/setup")
+async def get_setup_page(request: Request):
+    """Serves the initial setup page.
+
+    Args:
+        request: The incoming FastAPI request.
+
+    Returns:
+        A Jinja2 TemplateResponse for the setup page.
+    """
+    return templates.TemplateResponse("setup.html", {"request": request})
+
+
+@router.get("/logout")
+async def logout():
+    """Logs the user out by clearing the session cookie."""
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie("access_token")
+    return response
+
+
+@router.get("/login")
+async def get_login_page(request: Request, error: str = None):
+    """Serves the login page, optionally with an error message."""
+    return templates.TemplateResponse(
+        "login.html", {"request": request, "error": error}
     )
