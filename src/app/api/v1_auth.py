@@ -36,6 +36,6 @@ async def login(
         value=access_token,
         httponly=True,
         samesite="lax",
-        secure=False,  # Set to True if using HTTPS
+        secure=True,  # Set to True if using HTTPS
     )
     return response
