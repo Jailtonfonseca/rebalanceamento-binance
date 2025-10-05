@@ -57,6 +57,8 @@ class BinanceClient:
         base_url: The base URL for the Binance API.
     """
 
+    CACHE_TTL = 3600  # Cache TTL in seconds (1 hour)
+
     def __init__(
         self, api_key: str, secret_key: str, base_url: str = "https://api.binance.com"
     ):
@@ -71,6 +73,7 @@ class BinanceClient:
         self.secret_key = secret_key
         self.base_url = base_url
         self._exchange_info_cache: Optional[Dict[str, Any]] = None
+        self._exchange_info_cache_time: float = 0.0
 
     def _generate_signature(self, data: Dict[str, Any]) -> str:
         """Generates a HMAC-SHA256 signature for a request payload.
@@ -204,26 +207,30 @@ class BinanceClient:
         Returns:
             A dictionary mapping symbols to their exchange information.
         """
-        if self._exchange_info_cache:
-            return self._exchange_info_cache
-
-        endpoint = "/api/v3/exchangeInfo"
-        params = {}
+        # If specific symbols are requested, bypass the cache and fetch directly.
         if symbols:
-            # Binance's API for this endpoint expects the 'symbols' parameter to be a
-            # string that looks like a JSON array, e.g., '["BTCUSDT","ETHUSDT"]'.
-            # The httpx library, by default, URL-encodes the `[` `]` and `"` characters,
-            # which causes the Binance API to reject the request.
-            # To work around this, we manually append the query string for the 'symbols'
-            # parameter and pass an empty 'params' dict to the request method for
-            # other parameters if needed in the future.
+            endpoint = "/api/v3/exchangeInfo"
+            params = {}
             symbols_json_string = json.dumps(symbols)
             endpoint = f"{endpoint}?symbols={symbols_json_string}"
+            info = await self._send_request("GET", endpoint, params=params)
+            return {item["symbol"]: item for item in info["symbols"]}
 
-        info = await self._send_request("GET", endpoint, params=params)
+        # For requests for all symbols, use the cache.
+        is_cache_valid = (
+            self._exchange_info_cache is not None
+            and (time.time() - self._exchange_info_cache_time) < self.CACHE_TTL
+        )
+        if is_cache_valid:
+            return self._exchange_info_cache
+
+        # If cache is invalid or empty, fetch all symbols.
+        endpoint = "/api/v3/exchangeInfo"
+        info = await self._send_request("GET", endpoint, params={})
 
         # Cache the result by symbol for easy lookup
         self._exchange_info_cache = {item["symbol"]: item for item in info["symbols"]}
+        self._exchange_info_cache_time = time.time()
         return self._exchange_info_cache
 
     def get_symbol_filter(

@@ -71,29 +71,39 @@ def setup_logging():
     console_handler.setFormatter(console_formatter)
 
     # Add a filter to redact sensitive information
-    signature_filter = RedactSignature()
-    file_handler.addFilter(signature_filter)
-    console_handler.addFilter(signature_filter)
+    sensitive_data_filter = SensitiveDataRedactor()
+    file_handler.addFilter(sensitive_data_filter)
+    console_handler.addFilter(sensitive_data_filter)
 
     # Add handlers to the root logger
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
 
+    # Deactivate uvicorn's default access logger to prevent duplicate logs
+    logging.getLogger("uvicorn.access").propagate = False
+
     logging.info("Logging configured successfully.")
 
 
-class RedactSignature(logging.Filter):
-    """A logging filter to redact sensitive data from log messages."""
+class SensitiveDataRedactor(logging.Filter):
+    """A logging filter to redact sensitive data from log messages.
+
+    This filter redacts known sensitive keys in query parameters and headers
+    from log messages to prevent secrets from being leaked into logs.
+    """
+
+    # Combined regex to find and redact multiple sensitive keys
+    SENSITIVE_PATTERNS = re.compile(
+        r"(\b(signature|timestamp|apiKey|X-MBX-APIKEY|X-CMC_PRO_API_KEY)=)[^&\s]*",
+        re.IGNORECASE,
+    )
 
     def filter(self, record: logging.LogRecord) -> bool:
         """
-        Redacts the 'signature' query parameter from log messages.
+        Redacts sensitive keys from the log message.
         """
         if isinstance(record.msg, str):
-            # This regex finds 'signature=...' and replaces the value.
-            record.msg = re.sub(
-                r"(signature=)[0-9a-fA-F]+", r"\1[REDACTED]", record.msg
-            )
+            record.msg = self.SENSITIVE_PATTERNS.sub(r"\1[REDACTED]", record.msg)
         return True
 
 

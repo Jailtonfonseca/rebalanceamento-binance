@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Rebalanceador de Cripto{% endblock %}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
 </head>
 <body>
+    {% block navigation %}
     <nav>
         <div class="container">
             <a href="/" class="brand">Bot Rebalanceador</a>
@@ -24,6 +26,7 @@
             </ul>
         </div>
     </nav>
+    {% endblock navigation %}
 
     <main>
         <div class="container">
@@ -31,11 +34,13 @@
         </div>
     </main>
 
+    {% block footer %}
     <footer>
         <div class="container">
             <p>Bot Rebalanceador de Cripto | <a href="/docs" target="_blank">Documentação da API</a></p>
         </div>
     </footer>
+    {% endblock footer %}
 
     {% block scripts %}{% endblock %}
 </body>

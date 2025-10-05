@@ -46,8 +46,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
         request.state.user = None
 
         # 1. First-run setup check: If not configured, redirect to setup page
-        if not settings.is_configured and not is_public_path:
-            return RedirectResponse(url="/setup")
+        if not settings.is_configured and request.url.path != "/setup" and not is_public_path:
+             return RedirectResponse(url="/setup")
+
+        # If already configured, block access to the setup page
+        if settings.is_configured and request.url.path == "/setup":
+            return RedirectResponse(url="/")
 
         # 2. Authentication check for protected routes
         if settings.is_configured and not is_public_path:

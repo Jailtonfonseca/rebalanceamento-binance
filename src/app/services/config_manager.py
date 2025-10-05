@@ -183,7 +183,7 @@ class ConfigManager:
             logger.warning(
                 "If you lose this key, you will lose access to your encrypted API keys."
             )
-            logger.warning(f"MASTER_KEY: {key.decode()}")
+            logger.warning("This key will not be shown again.")
             logger.warning("=" * 80)
 
         return Fernet(key)
