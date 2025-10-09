@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Login - Crypto Rebalancing Bot{% endblock %}
+{% block title %}{{ _('Login') }} - {{ super() }}{% endblock %}
 
 {% block navigation %}{% endblock %}
 {% block footer %}{% endblock %}
@@ -21,20 +21,20 @@
 </style>
 <div class="card login-card">
     <div class="card-header">
-        <h1 class="card-title">Login</h1>
-        <p class="card-subtitle text-muted">Please log in to continue.</p>
+        <h1 class="card-title">{{ _('Login') }}</h1>
+        <p class="card-subtitle text-muted">{{ _('Please log in to continue.') }}</p>
     </div>
     <div class="card-body">
         <form action="/api/v1/auth/login" method="post">
             <div class="form-group">
-                <label for="username">Username</label>
+                <label for="username">{{ _('Username') }}</label>
                 <input type="text" id="username" name="username" class="form-control" required>
             </div>
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password">{{ _('Password') }}</label>
                 <input type="password" id="password" name="password" class="form-control" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-block">Login</button>
+            <button type="submit" class="btn btn-primary btn-block">{{ _('Login') }}</button>
         </form>
     </div>
 </div>

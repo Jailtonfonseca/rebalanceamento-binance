@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Login Failed - Crypto Rebalancing Bot{% endblock %}
+{% block title %}{{ _('Login Failed') }} - {{ super() }}{% endblock %}
 
 {% block navigation %}{% endblock %}
 {% block footer %}{% endblock %}
@@ -21,11 +21,11 @@
 </style>
 <div class="card login-card text-center">
     <div class="card-header">
-        <h1 class="card-title">Login Failed</h1>
+        <h1 class="card-title">{{ _('Login Failed') }}</h1>
     </div>
     <div class="card-body">
-        <div class="alert alert-danger">Invalid username or password.</div>
-        <a href="/login" class="btn btn-primary">Try Again</a>
+        <div class="alert alert-danger">{{ _('Invalid username or password.') }}</div>
+        <a href="/login" class="btn btn-primary">{{ _('Try Again') }}</a>
     </div>
 </div>
 {% endblock %}

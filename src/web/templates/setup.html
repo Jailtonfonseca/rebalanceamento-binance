@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ request.state.language|replace('_', '-') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome - Setup Required</title>
+    <title>{{ _('Welcome - Setup Required') }}</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
         body {
@@ -22,20 +22,20 @@
 <body>
     <div class="card setup-card">
         <div class="card-header">
-            <h1 class="card-title">Initial Setup</h1>
-            <p class="card-subtitle text-muted">Please create your admin account to continue.</p>
+            <h1 class="card-title">{{ _('Initial Setup') }}</h1>
+            <p class="card-subtitle text-muted">{{ _('Please create your admin account to continue.') }}</p>
         </div>
         <div class="card-body">
             <form action="/api/v1/setup" method="post">
                 <div class="form-group">
-                    <label for="username">Username</label>
+                    <label for="username">{{ _('Username') }}</label>
                     <input type="text" id="username" name="username" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label for="password">Password</label>
+                    <label for="password">{{ _('Password') }}</label>
                     <input type="password" id="password" name="password" class="form-control" required>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">Save and Continue</button>
+                <button type="submit" class="btn btn-primary btn-block">{{ _('Save and Continue') }}</button>
             </form>
         </div>
     </div>

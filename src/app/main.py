@@ -22,6 +22,7 @@ from app.api import (
 from app.db.models import init_db
 from app.middleware import (
     AuthenticationMiddleware,
+    I18nMiddleware,
     SecurityHeadersMiddleware,
     SetupMiddleware,
 )
@@ -46,6 +47,7 @@ Instrumentator().instrument(app).expose(app)
 app.add_middleware(ErrorHandlingMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
+app.add_middleware(I18nMiddleware)
 app.add_middleware(AuthenticationMiddleware)
 app.add_middleware(SetupMiddleware)
 

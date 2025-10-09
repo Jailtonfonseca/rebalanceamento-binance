@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="{{ request.state.language|replace('_', '-') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Rebalanceador de Cripto{% endblock %}</title>
+    <title>{% block title %}{{ _('Crypto Rebalancing Bot') }}{% endblock %}</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
 </head>
@@ -11,17 +11,17 @@
     {% block navigation %}
     <nav>
         <div class="container">
-            <a href="/" class="brand">Bot Rebalanceador</a>
+            <a href="/" class="brand">{{ _('Rebalancer Bot') }}</a>
             <ul>
-                <li><a href="/">Painel</a></li>
-                <li><a href="/config">Configuração</a></li>
-                <li><a href="/history">Histórico</a></li>
-                <li><a href="/arbitrage">Arbitragem</a></li>
+                <li><a href="/">{{ _('Dashboard') }}</a></li>
+                <li><a href="/config">{{ _('Configuration') }}</a></li>
+                <li><a href="/history">{{ _('History') }}</a></li>
+                <li><a href="/arbitrage">{{ _('Arbitrage') }}</a></li>
             </ul>
             <ul class="user-menu">
                 {% if request.state.user %}
-                <li><span>Logado como: {{ request.state.user }}</span></li>
-                <li><a href="/logout" class="logout-link">Sair</a></li>
+                <li><span>{{ _('Logged in as:') }} {{ request.state.user }}</span></li>
+                <li><a href="/logout" class="logout-link">{{ _('Logout') }}</a></li>
                 {% endif %}
             </ul>
         </div>
@@ -36,8 +36,14 @@
 
     {% block footer %}
     <footer>
-        <div class="container">
-            <p>Bot Rebalanceador de Cripto | <a href="/docs" target="_blank">Documentação da API</a></p>
+        <div class="container footer-container">
+            <span>{{ _('Crypto Rebalancing Bot') }} | <a href="/docs" target="_blank">{{ _('API Documentation') }}</a></span>
+            <form action="/select-lang" method="get" class="language-selector">
+                <select name="lang" onchange="this.form.submit()" title="{{ _('Select Language') }}">
+                    <option value="en" {% if request.state.language == 'en' %}selected{% endif %}>English</option>
+                    <option value="pt_BR" {% if request.state.language == 'pt_BR' %}selected{% endif %}>Português</option>
+                </select>
+            </form>
         </div>
     </footer>
     {% endblock footer %}
