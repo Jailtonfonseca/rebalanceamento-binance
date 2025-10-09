@@ -122,8 +122,12 @@ async def logout():
 
 
 @router.get("/login")
-async def get_login_page(request: Request, error: str = None):
-    """Serves the login page, optionally with an error message."""
-    return templates.TemplateResponse(
-        "login.html", {"request": request, "error": error}
-    )
+async def get_login_page(request: Request):
+    """Serves the login page."""
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@router.get("/login-failed")
+async def get_login_failed_page(request: Request):
+    """Serves the page shown on a failed login attempt."""
+    return templates.TemplateResponse("login-failed.html", {"request": request})
