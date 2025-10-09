@@ -20,7 +20,11 @@ from app.api import (
     v1_status,
 )
 from app.db.models import init_db
-from app.middleware import AuthenticationMiddleware, SetupMiddleware
+from app.middleware import (
+    AuthenticationMiddleware,
+    SecurityHeadersMiddleware,
+    SetupMiddleware,
+)
 from app.services.config_manager import AppSettings, config_manager
 from app.services.scheduler import scheduler, setup_scheduler
 from app.utils.logging import setup_logging
@@ -37,12 +41,10 @@ app = FastAPI(
 Instrumentator().instrument(app).expose(app)
 
 # --- Middlewares ---
-# Middlewares are processed in the reverse order they are added.
-# 1. ErrorHandlingMiddleware (catches errors from all subsequent middlewares)
-# 2. RequestIDMiddleware (adds a request ID for logging)
-# 3. AuthenticationMiddleware (handles user login and session)
-# 4. SetupMiddleware (redirects to /setup if the app is not configured)
+# Middlewares are processed in the reverse order they are added. The first
+# middleware added is the outermost layer.
 app.add_middleware(ErrorHandlingMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(AuthenticationMiddleware)
 app.add_middleware(SetupMiddleware)
