@@ -17,3 +17,4 @@ pytest
 pytest-anyio
 python-jose[cryptography]
 trio
+babel

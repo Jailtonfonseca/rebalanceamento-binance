@@ -1,95 +1,109 @@
 {% extends "base.html" %}
 
-{% block title %}Configuração - {{ super() }}{% endblock %}
+{% block title %}{{ _('Configuration') }} - {{ super() }}{% endblock %}
 
 {% block content %}
-<h2>Configuração</h2>
-<p>Gerencie as configurações do bot aqui. As chaves de API são criptografadas e nunca mais são mostradas após salvar.</p>
+<h2>{{ _('Configuration') }}</h2>
+<p>{{ _('Manage the bot settings here. API keys are encrypted and never shown again after saving.') }}</p>
 
 <div id="alert-placeholder"></div>
 
 <form id="config-form">
-    <h3>Segurança e Credenciais</h3>
+    <h3>{{ _('Security and Credentials') }}</h3>
     <div class="card">
         <div class="form-group">
-            <label for="admin_password">Alterar Senha do Administrador</label>
-            <input type="password" id="admin_password" name="admin_password" placeholder="Deixe em branco para manter a senha atual">
+            <label for="admin_password">{{ _('Change Admin Password') }}</label>
+            <input type="password" id="admin_password" name="admin_password" placeholder="{{ _('Leave blank to keep the current password') }}">
         </div>
         <hr>
-        <h4>Chaves de API</h4>
+        <h4>{{ _('API Keys') }}</h4>
         <div class="form-group">
-            <label for="binance_api_key">Chave de API da Binance</label>
-            <input type="text" id="binance_api_key" name="binance_api_key" placeholder="{% if settings.binance.api_key_encrypted %}Já definida, insira uma nova chave para alterar{% else %}Insira sua chave de API da Binance{% endif %}">
+            <label for="binance_api_key">{{ _('Binance API Key') }}</label>
+            <input type="text" id="binance_api_key" name="binance_api_key" placeholder="{% if settings.binance.api_key_encrypted %}{{ _('Already set, enter a new key to change') }}{% else %}{{ _('Enter your Binance API key') }}{% endif %}">
         </div>
         <div class="form-group">
-            <label for="binance_secret_key">Chave Secreta da Binance</label>
-            <input type="password" id="binance_secret_key" name="binance_secret_key" placeholder="{% if settings.binance.secret_key_encrypted %}Já definida, insira uma nova chave para alterar{% else %}Insira sua chave secreta da Binance{% endif %}">
+            <label for="binance_secret_key">{{ _('Binance Secret Key') }}</label>
+            <input type="password" id="binance_secret_key" name="binance_secret_key" placeholder="{% if settings.binance.secret_key_encrypted %}{{ _('Already set, enter a new key to change') }}{% else %}{{ _('Enter your Binance secret key') }}{% endif %}">
         </div>
         <div class="form-group">
-            <label for="cmc_api_key">Chave de API do CoinMarketCap</label>
-            <input type="text" id="cmc_api_key" name="cmc_api_key" placeholder="{% if settings.cmc.api_key_encrypted %}Já definida, insira uma nova chave para alterar{% else %}Insira sua chave de API do CoinMarketCap{% endif %}">
+            <label for="cmc_api_key">{{ _('CoinMarketCap API Key') }}</label>
+            <input type="text" id="cmc_api_key" name="cmc_api_key" placeholder="{% if settings.cmc.api_key_encrypted %}{{ _('Already set, enter a new key to change') }}{% else %}{{ _('Enter your CoinMarketCap API key') }}{% endif %}">
         </div>
-        <button type="button" id="test-keys-btn" class="secondary">Testar Chaves de API</button>
+        <button type="button" id="test-keys-btn" class="secondary">{{ _('Test API Keys') }}</button>
     </div>
 
-    <h3>Estratégia de Rebalanceamento</h3>
+    <h3>{{ _('Rebalancing Strategy') }}</h3>
     <div class="card">
         <div class="form-group">
-            <label for="dry_run">Modo de Simulação</label>
+            <label for="dry_run">{{ _('Dry Run Mode') }}</label>
             <select id="dry_run" name="dry_run">
-                <option value="true" {% if settings.dry_run %}selected{% endif %}>Ativado (Simular transações, sem ordens reais)</option>
-                <option value="false" {% if not settings.dry_run %}selected{% endif %}>Desativado (Executar transações reais)</option>
+                <option value="true" {% if settings.dry_run %}selected{% endif %}>{{ _('Enabled (Simulate trades, no real orders)') }}</option>
+                <option value="false" {% if not settings.dry_run %}selected{% endif %}>{{ _('Disabled (Execute real trades)') }}</option>
             </select>
         </div>
         <div class="form-group">
-            <label for="strategy">Tipo de Estratégia</label>
+            <label for="strategy">{{ _('Strategy Type') }}</label>
             <select id="strategy" name="strategy">
-                <option value="periodic" {% if settings.strategy == 'periodic' %}selected{% endif %}>Periódica</option>
-                <option value="threshold" {% if settings.strategy == 'threshold' %}selected{% endif %}>Por Limite</option>
+                <option value="periodic" {% if settings.strategy == 'periodic' %}selected{% endif %}>{{ _('Periodic') }}</option>
+                <option value="threshold" {% if settings.strategy == 'threshold' %}selected{% endif %}>{{ _('Threshold') }}</option>
             </select>
         </div>
         <div class="form-group">
-            <label for="periodic_hours">Intervalo Periódico (Horas)</label>
+            <label for="periodic_hours">{{ _('Periodic Interval (Hours)') }}</label>
             <input type="number" id="periodic_hours" name="periodic_hours" value="{{ settings.periodic_hours }}" min="1">
         </div>
         <div class="form-group">
-            <label for="threshold_pct">Limite de Rebalanceamento (%)</label>
+            <label for="threshold_pct">{{ _('Rebalancing Threshold (%%)') }}</label>
             <input type="number" id="threshold_pct" name="threshold_pct" value="{{ settings.threshold_pct }}" min="0.1" step="0.1">
         </div>
     </div>
 
-    <h3>Portfólio e Negociação</h3>
+    <h3>{{ _('Portfolio and Trading') }}</h3>
     <div class="card">
         <div class="form-group">
-            <label for="base_pair">Par Base</label>
+            <label for="base_pair">{{ _('Base Pair') }}</label>
             <input type="text" id="base_pair" name="base_pair" value="{{ settings.base_pair }}">
         </div>
         <div class="form-group">
-            <label for="max_cmc_rank">Rank Máximo no CoinMarketCap</label>
+            <label for="max_cmc_rank">{{ _('Max CoinMarketCap Rank') }}</label>
             <input type="number" id="max_cmc_rank" name="max_cmc_rank" value="{{ settings.max_cmc_rank }}" min="10" max="5000">
         </div>
          <div class="form-group">
-            <label for="min_trade_value_usd">Valor Mínimo da Transação (USD)</label>
+            <label for="min_trade_value_usd">{{ _('Minimum Trade Value (USD)') }}</label>
             <input type="number" id="min_trade_value_usd" name="min_trade_value_usd" value="{{ settings.min_trade_value_usd }}" min="10" step="1">
         </div>
         <hr>
-        <h4>Alocações Alvo (<span id="total-alloc-pct">0</span>%)</h4>
+        <h4>{{ _('Target Allocations') }} (<span id="total-alloc-pct">0</span>%)</h4>
         <div id="allocations-container">
             {% for symbol, pct in settings.allocations.items() %}
             <div class="allocation-item">
-                <input type="text" name="allocations[{{ symbol }}]" placeholder="Ativo (ex: BTC)" value="{{ symbol }}" class="alloc-symbol">
+                <input type="text" name="allocations[{{ symbol }}]" placeholder="{{ _('Asset (e.g., BTC)') }}" value="{{ symbol }}" class="alloc-symbol">
                 <input type="number" name="allocations[{{ symbol }}]" placeholder="%" value="{{ pct }}" min="0" max="100" step="0.1" class="alloc-pct">
                 <button type="button" class="remove-alloc-btn">&times;</button>
             </div>
             {% endfor %}
         </div>
-        <button type="button" id="add-alloc-btn" class="secondary">Adicionar Ativo</button>
+        <button type="button" id="add-alloc-btn" class="secondary">{{ _('Add Asset') }}</button>
     </div>
 
     <div class="form-actions">
-        <button type="submit" id="save-btn">Salvar Configuração</button>
+        <button type="submit" id="save-btn">{{ _('Save Configuration') }}</button>
     </div>
 </form>
+
+<div id="js-strings"
+     data-saving="{{ _('Saving...') }}"
+     data-config-saved="{{ _('Configuration saved successfully!') }}"
+     data-save-failed="{{ _('Failed to save:') }}"
+     data-unknown-error="{{ _('Unknown error') }}"
+     data-generic-error="{{ _('An error occurred:') }}"
+     data-testing="{{ _('Testing...') }}"
+     data-test-api-keys="{{ _('Test API Keys') }}"
+     data-api-test-results="{{ _('API Key Test Results:') }}"
+     data-asset-placeholder="{{ _('Asset (e.g., BTC)') }}"
+     data-save-configuration="{{ _('Save Configuration') }}"
+     style="display: none;">
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -102,6 +116,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const saveBtn = document.getElementById('save-btn');
     const testKeysBtn = document.getElementById('test-keys-btn');
     const alertPlaceholder = document.getElementById('alert-placeholder');
+    const jsStrings = document.getElementById('js-strings').dataset;
 
     function createAlert(message, type = 'danger') {
         const wrapper = document.createElement('div');
@@ -123,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const div = document.createElement('div');
         div.className = 'allocation-item';
         div.innerHTML = `
-            <input type="text" placeholder="Ativo (ex: BTC)" value="${symbol.toUpperCase()}" class="alloc-symbol">
+            <input type="text" placeholder="${jsStrings.assetPlaceholder}" value="${symbol.toUpperCase()}" class="alloc-symbol">
             <input type="number" placeholder="%" value="${pct}" min="0" max="100" step="0.1" class="alloc-pct">
             <button type="button" class="remove-alloc-btn">&times;</button>
         `;
@@ -150,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Handle form submission
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
-        saveBtn.textContent = 'Salvando...';
+        saveBtn.textContent = jsStrings.saving;
         saveBtn.disabled = true;
 
         const formData = new FormData();
@@ -178,24 +193,24 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             if (response.ok) {
-                createAlert('Configuração salva com sucesso!', 'success');
+                createAlert(jsStrings.configSaved, 'success');
                 // Optionally reload or update UI
                 setTimeout(() => window.location.reload(), 1000);
             } else {
                 const errorData = await response.json();
-                createAlert(`Falha ao salvar: ${errorData.detail || 'Erro desconhecido'}`);
+                createAlert(`${jsStrings.saveFailed} ${errorData.detail || jsStrings.unknownError}`);
             }
         } catch (error) {
-            createAlert(`Ocorreu um erro: ${error.message}`);
+            createAlert(`${jsStrings.genericError} ${error.message}`);
         } finally {
-            saveBtn.textContent = 'Salvar Configuração';
+            saveBtn.textContent = jsStrings.saveConfiguration;
             saveBtn.disabled = false;
         }
     });
 
     // Handle Test API Keys
     testKeysBtn.addEventListener('click', async function () {
-        testKeysBtn.textContent = 'Testando...';
+        testKeysBtn.textContent = jsStrings.testing;
         testKeysBtn.disabled = true;
 
         // First, save the current keys in the form if any are entered
@@ -209,21 +224,21 @@ document.addEventListener('DOMContentLoaded', function () {
             const result = await response.json();
 
             if (response.ok) {
-                let report = '<strong>Resultados do Teste de Chave de API:</strong><br>';
+                let report = `<strong>${jsStrings.apiTestResults}</strong><br>`;
                 report += `Binance: <span style="color:var(--success-color)">${result.binance.message}</span><br>`;
                 report += `CoinMarketCap: <span style="color:var(--success-color)">${result.cmc.message}</span>`;
                 createAlert(report, 'success');
             } else {
-                 let report = '<strong>Resultados do Teste de Chave de API:</strong><br>';
+                 let report = `<strong>${jsStrings.apiTestResults}</strong><br>`;
                  const details = result.detail;
                  report += `Binance: <span style="color:${details.binance.status === 'success' ? 'var(--success-color)' : 'var(--danger-color)'}">${details.binance.message}</span><br>`;
                  report += `CoinMarketCap: <span style="color:${details.cmc.status === 'success' ? 'var(--success-color)' : 'var(--danger-color)'}">${details.cmc.message}</span>`;
                  createAlert(report, 'danger');
             }
         } catch (error) {
-            createAlert(`Ocorreu um erro: ${error.message}`);
+            createAlert(`${jsStrings.genericError} ${error.message}`);
         } finally {
-            testKeysBtn.textContent = 'Testar Chaves de API';
+            testKeysBtn.textContent = jsStrings.testApiKeys;
             testKeysBtn.disabled = false;
         }
     });

@@ -1,0 +1,484 @@
+# English translations for PROJECT.
+# Copyright (C) 2025 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-10-09 23:14+0000\n"
+"PO-Revision-Date: 2025-10-09 23:15+0000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: src/web/templates/arbitrage.html:3 src/web/templates/base.html:19
+msgid "Arbitrage"
+msgstr "Arbitrage"
+
+#: src/web/templates/arbitrage.html:36
+msgid "Arbitrage Opportunities"
+msgstr "Arbitrage Opportunities"
+
+#: src/web/templates/arbitrage.html:38
+msgid ""
+"Scanning for triangular arbitrage opportunities on Binance. This is a "
+"simulation and does not execute trades."
+msgstr ""
+"Scanning for triangular arbitrage opportunities on Binance. This is a "
+"simulation and does not execute trades."
+
+#: src/web/templates/arbitrage.html:44
+msgid "Scanning for opportunities..."
+msgstr "Scanning for opportunities..."
+
+#: src/web/templates/arbitrage.html:51
+msgid "Path"
+msgstr "Path"
+
+#: src/web/templates/arbitrage.html:52
+#, python-format
+msgid "Estimated Profit (%%)"
+msgstr "Estimated Profit (%%)"
+
+#: src/web/templates/arbitrage.html:53
+msgid "Trade Rates"
+msgstr "Trade Rates"
+
+#: src/web/templates/arbitrage.html:61
+#, python-format
+msgid ""
+"Profit calculation includes an estimated trading fee of %(fee)s%% per "
+"trade."
+msgstr ""
+"Profit calculation includes an estimated trading fee of %(fee)s%% per "
+"trade."
+
+#: src/web/templates/arbitrage.html:65
+msgid "No profitable arbitrage opportunities found at the moment."
+msgstr "No profitable arbitrage opportunities found at the moment."
+
+#: src/web/templates/arbitrage.html:70
+msgid "Rescan"
+msgstr "Rescan"
+
+#: src/web/templates/arbitrage.html:77
+msgid "Failed to fetch data:"
+msgstr "Failed to fetch data:"
+
+#: src/web/templates/base.html:6 src/web/templates/base.html:40
+msgid "Crypto Rebalancing Bot"
+msgstr "Crypto Rebalancing Bot"
+
+#: src/web/templates/base.html:14
+msgid "Rebalancer Bot"
+msgstr "Rebalancer Bot"
+
+#: src/web/templates/base.html:16 src/web/templates/dashboard.html:3
+#: src/web/templates/dashboard.html:9
+msgid "Dashboard"
+msgstr "Dashboard"
+
+#: src/web/templates/base.html:17 src/web/templates/config.html:3
+#: src/web/templates/config.html:6
+msgid "Configuration"
+msgstr "Configuration"
+
+#: src/web/templates/base.html:18 src/web/templates/history.html:3
+msgid "History"
+msgstr "History"
+
+#: src/web/templates/base.html:23
+msgid "Logged in as:"
+msgstr "Logged in as:"
+
+#: src/web/templates/base.html:24
+msgid "Logout"
+msgstr "Logout"
+
+#: src/web/templates/base.html:40
+msgid "API Documentation"
+msgstr "API Documentation"
+
+#: src/web/templates/config.html:7
+msgid ""
+"Manage the bot settings here. API keys are encrypted and never shown "
+"again after saving."
+msgstr ""
+"Manage the bot settings here. API keys are encrypted and never shown "
+"again after saving."
+
+#: src/web/templates/config.html:12
+msgid "Security and Credentials"
+msgstr "Security and Credentials"
+
+#: src/web/templates/config.html:15
+msgid "Change Admin Password"
+msgstr "Change Admin Password"
+
+#: src/web/templates/config.html:16
+msgid "Leave blank to keep the current password"
+msgstr "Leave blank to keep the current password"
+
+#: src/web/templates/config.html:19
+msgid "API Keys"
+msgstr "API Keys"
+
+#: src/web/templates/config.html:21
+msgid "Binance API Key"
+msgstr "Binance API Key"
+
+#: src/web/templates/config.html:22 src/web/templates/config.html:26
+#: src/web/templates/config.html:30
+msgid "Already set, enter a new key to change"
+msgstr "Already set, enter a new key to change"
+
+#: src/web/templates/config.html:22
+msgid "Enter your Binance API key"
+msgstr "Enter your Binance API key"
+
+#: src/web/templates/config.html:25
+msgid "Binance Secret Key"
+msgstr "Binance Secret Key"
+
+#: src/web/templates/config.html:26
+msgid "Enter your Binance secret key"
+msgstr "Enter your Binance secret key"
+
+#: src/web/templates/config.html:29
+msgid "CoinMarketCap API Key"
+msgstr "CoinMarketCap API Key"
+
+#: src/web/templates/config.html:30
+msgid "Enter your CoinMarketCap API key"
+msgstr "Enter your CoinMarketCap API key"
+
+#: src/web/templates/config.html:32 src/web/templates/config.html:101
+msgid "Test API Keys"
+msgstr "Test API Keys"
+
+#: src/web/templates/config.html:35
+msgid "Rebalancing Strategy"
+msgstr "Rebalancing Strategy"
+
+#: src/web/templates/config.html:38
+msgid "Dry Run Mode"
+msgstr "Dry Run Mode"
+
+#: src/web/templates/config.html:40
+msgid "Enabled (Simulate trades, no real orders)"
+msgstr "Enabled (Simulate trades, no real orders)"
+
+#: src/web/templates/config.html:41
+msgid "Disabled (Execute real trades)"
+msgstr "Disabled (Execute real trades)"
+
+#: src/web/templates/config.html:45
+msgid "Strategy Type"
+msgstr "Strategy Type"
+
+#: src/web/templates/config.html:47
+msgid "Periodic"
+msgstr "Periodic"
+
+#: src/web/templates/config.html:48
+msgid "Threshold"
+msgstr "Threshold"
+
+#: src/web/templates/config.html:52
+msgid "Periodic Interval (Hours)"
+msgstr "Periodic Interval (Hours)"
+
+#: src/web/templates/config.html:56
+#, python-format
+msgid "Rebalancing Threshold (%%)"
+msgstr "Rebalancing Threshold (%%)"
+
+#: src/web/templates/config.html:61
+msgid "Portfolio and Trading"
+msgstr "Portfolio and Trading"
+
+#: src/web/templates/config.html:64
+msgid "Base Pair"
+msgstr "Base Pair"
+
+#: src/web/templates/config.html:68
+msgid "Max CoinMarketCap Rank"
+msgstr "Max CoinMarketCap Rank"
+
+#: src/web/templates/config.html:72
+msgid "Minimum Trade Value (USD)"
+msgstr "Minimum Trade Value (USD)"
+
+#: src/web/templates/config.html:76
+msgid "Target Allocations"
+msgstr "Target Allocations"
+
+#: src/web/templates/config.html:80 src/web/templates/config.html:103
+msgid "Asset (e.g., BTC)"
+msgstr "Asset (e.g., BTC)"
+
+#: src/web/templates/config.html:86
+msgid "Add Asset"
+msgstr "Add Asset"
+
+#: src/web/templates/config.html:90 src/web/templates/config.html:104
+msgid "Save Configuration"
+msgstr "Save Configuration"
+
+#: src/web/templates/config.html:95
+msgid "Saving..."
+msgstr "Saving..."
+
+#: src/web/templates/config.html:96
+msgid "Configuration saved successfully!"
+msgstr "Configuration saved successfully!"
+
+#: src/web/templates/config.html:97
+msgid "Failed to save:"
+msgstr "Failed to save:"
+
+#: src/web/templates/config.html:98
+msgid "Unknown error"
+msgstr "Unknown error"
+
+#: src/web/templates/config.html:99
+msgid "An error occurred:"
+msgstr "An error occurred:"
+
+#: src/web/templates/config.html:100
+msgid "Testing..."
+msgstr "Testing..."
+
+#: src/web/templates/config.html:102
+msgid "API Key Test Results:"
+msgstr "API Key Test Results:"
+
+#: src/web/templates/dashboard.html:10
+msgid ""
+"Manually trigger a rebalance run. The bot will use the currently saved "
+"configuration."
+msgstr ""
+"Manually trigger a rebalance run. The bot will use the currently saved "
+"configuration."
+
+#: src/web/templates/dashboard.html:12
+msgid "Run Rebalance"
+msgstr "Run Rebalance"
+
+#: src/web/templates/dashboard.html:13
+msgid "Run Dry Run"
+msgstr "Run Dry Run"
+
+#: src/web/templates/dashboard.html:18
+msgid "Last Run Status"
+msgstr "Last Run Status"
+
+#: src/web/templates/dashboard.html:20 src/web/templates/history.html:27
+msgid "Run ID:"
+msgstr "Run ID:"
+
+#: src/web/templates/dashboard.html:21
+msgid "Date & Time:"
+msgstr "Date & Time:"
+
+#: src/web/templates/dashboard.html:22 src/web/templates/history.html:14
+msgid "Status:"
+msgstr "Status:"
+
+#: src/web/templates/dashboard.html:22 src/web/templates/history.html:16
+msgid "Dry Run"
+msgstr "Dry Run"
+
+#: src/web/templates/dashboard.html:23
+msgid "Base Pair:"
+msgstr "Base Pair:"
+
+#: src/web/templates/dashboard.html:24
+msgid "Trigger:"
+msgstr "Trigger:"
+
+#: src/web/templates/dashboard.html:24 src/web/templates/history.html:20
+msgid "Scheduled"
+msgstr "Scheduled"
+
+#: src/web/templates/dashboard.html:24 src/web/templates/history.html:20
+msgid "Manual"
+msgstr "Manual"
+
+#: src/web/templates/dashboard.html:25 src/web/templates/history.html:23
+msgid "Summary:"
+msgstr "Summary:"
+
+#: src/web/templates/dashboard.html:27 src/web/templates/history.html:66
+msgid "Total Fee Cost (Estimated):"
+msgstr "Total Fee Cost (Estimated):"
+
+#: src/web/templates/dashboard.html:31
+msgid "Projected Balances After Run"
+msgstr "Projected Balances After Run"
+
+#: src/web/templates/dashboard.html:35 src/web/templates/dashboard.html:96
+#: src/web/templates/history.html:42 src/web/templates/history.html:70
+msgid "Asset"
+msgstr "Asset"
+
+#: src/web/templates/dashboard.html:36 src/web/templates/history.html:71
+msgid "New Quantity"
+msgstr "New Quantity"
+
+#: src/web/templates/dashboard.html:37 src/web/templates/history.html:72
+#, python-format
+msgid "New Value (%(base_pair)s)"
+msgstr "New Value (%(base_pair)s)"
+
+#: src/web/templates/dashboard.html:38 src/web/templates/history.html:73
+msgid "New Value (USD)"
+msgstr "New Value (USD)"
+
+#: src/web/templates/dashboard.html:45
+msgid "No projected balance data available."
+msgstr "No projected balance data available."
+
+#: src/web/templates/dashboard.html:73 src/web/templates/history.html:30
+msgid "Errors:"
+msgstr "Errors:"
+
+#: src/web/templates/dashboard.html:82
+msgid "No rebalance runs have been recorded yet."
+msgstr "No rebalance runs have been recorded yet."
+
+#: src/web/templates/dashboard.html:87
+msgid "Current Balances"
+msgstr "Current Balances"
+
+#: src/web/templates/dashboard.html:88
+msgid "Loading balances..."
+msgstr "Loading balances..."
+
+#: src/web/templates/dashboard.html:97 src/web/templates/history.html:44
+msgid "Quantity"
+msgstr "Quantity"
+
+#: src/web/templates/dashboard.html:98
+msgid "Value (Base)"
+msgstr "Value (Base)"
+
+#: src/web/templates/dashboard.html:99 src/web/templates/history.html:45
+msgid "Value (USD)"
+msgstr "Value (USD)"
+
+#: src/web/templates/dashboard.html:111
+msgid "Portfolio Value History"
+msgstr "Portfolio Value History"
+
+#: src/web/templates/dashboard.html:112
+msgid "No history available yet."
+msgstr "No history available yet."
+
+#: src/web/templates/dashboard.html:119
+msgid "Performance by Asset"
+msgstr "Performance by Asset"
+
+#: src/web/templates/dashboard.html:120
+msgid "No history available for assets."
+msgstr "No history available for assets."
+
+#: src/web/templates/history.html:6
+msgid "Rebalancing History"
+msgstr "Rebalancing History"
+
+#: src/web/templates/history.html:7
+msgid "Showing the last 100 runs."
+msgstr "Showing the last 100 runs."
+
+#: src/web/templates/history.html:13
+msgid "Date:"
+msgstr "Date:"
+
+#: src/web/templates/history.html:15
+msgid "Mode:"
+msgstr "Mode:"
+
+#: src/web/templates/history.html:17
+msgid "Live"
+msgstr "Live"
+
+#: src/web/templates/history.html:19
+msgid "Run:"
+msgstr "Run:"
+
+#: src/web/templates/history.html:21
+msgid "Pair:"
+msgstr "Pair:"
+
+#: src/web/templates/history.html:38
+msgid "Trades Executed"
+msgstr "Trades Executed"
+
+#: src/web/templates/history.html:43
+msgid "Side"
+msgstr "Side"
+
+#: src/web/templates/history.html:46
+msgid "Fee (USD)"
+msgstr "Fee (USD)"
+
+#: src/web/templates/history.html:65
+msgid "Projected Balances"
+msgstr "Projected Balances"
+
+#: src/web/templates/history.html:99
+msgid "No history found."
+msgstr "No history found."
+
+#: src/web/templates/login-failed.html:3 src/web/templates/login-failed.html:24
+msgid "Login Failed"
+msgstr "Login Failed"
+
+#: src/web/templates/login-failed.html:27
+msgid "Invalid username or password."
+msgstr "Invalid username or password."
+
+#: src/web/templates/login-failed.html:28
+msgid "Try Again"
+msgstr "Try Again"
+
+#: src/web/templates/login.html:3 src/web/templates/login.html:24
+#: src/web/templates/login.html:37
+msgid "Login"
+msgstr "Login"
+
+#: src/web/templates/login.html:25
+msgid "Please log in to continue."
+msgstr "Please log in to continue."
+
+#: src/web/templates/login.html:30 src/web/templates/setup.html:31
+msgid "Username"
+msgstr "Username"
+
+#: src/web/templates/login.html:34 src/web/templates/setup.html:35
+msgid "Password"
+msgstr "Password"
+
+#: src/web/templates/setup.html:6
+msgid "Welcome - Setup Required"
+msgstr "Welcome - Setup Required"
+
+#: src/web/templates/setup.html:25
+msgid "Initial Setup"
+msgstr "Initial Setup"
+
+#: src/web/templates/setup.html:26
+msgid "Please create your admin account to continue."
+msgstr "Please create your admin account to continue."
+
+#: src/web/templates/setup.html:38
+msgid "Save and Continue"
+msgstr "Save and Continue"

@@ -131,3 +131,11 @@ async def get_login_page(request: Request):
 async def get_login_failed_page(request: Request):
     """Serves the page shown on a failed login attempt."""
     return templates.TemplateResponse("login-failed.html", {"request": request})
+
+
+@router.get("/select-lang")
+async def select_lang(request: Request, lang: str):
+    """Sets the language cookie and redirects the user."""
+    response = RedirectResponse(url=request.headers.get("Referer", "/"))
+    response.set_cookie(key="lang", value=lang, max_age=31536000)  # Expires in 1 year
+    return response

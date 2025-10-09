@@ -1,9 +1,50 @@
+from babel import Locale
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
 from app.core.security import decode_access_token
 from app.services.config_manager import config_manager
+
+# --- I18n Configuration ---
+SUPPORTED_LOCALES = ["en", "pt_BR"]
+DEFAULT_LOCALE = "en"
+
+
+class I18nMiddleware(BaseHTTPMiddleware):
+    """
+    Handles internationalization by detecting the user's preferred language.
+
+    The language is determined in the following order:
+    1. From the 'lang' cookie, if set.
+    2. From the 'Accept-Language' header of the browser.
+    3. Falls back to the default locale ('en').
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        # 1. Get language from cookie
+        lang = request.cookies.get("lang")
+
+        # 2. If no cookie, parse Accept-Language header
+        if not lang:
+            accept_language = request.headers.get("Accept-Language")
+            if accept_language:
+                # Find the best match from the supported locales
+                lang = Locale.negotiate(
+                    [loc.replace("-", "_") for loc in accept_language.split(",")],
+                    SUPPORTED_LOCALES,
+                    sep="-",
+                )
+
+        # 3. Fallback to default if no language is determined
+        if not lang or lang not in SUPPORTED_LOCALES:
+            lang = DEFAULT_LOCALE
+
+        # Store the determined language in the request state
+        request.state.language = lang
+        return await call_next(request)
 
 
 # A list of paths that are allowed during the setup process.

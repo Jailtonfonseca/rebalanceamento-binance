@@ -18,6 +18,8 @@ attrs==25.3.0
     # via
     #   outcome
     #   trio
+babel==2.17.0
+    # via -r requirements.in
 bcrypt==5.0.0
     # via -r requirements.in
 black==25.9.0

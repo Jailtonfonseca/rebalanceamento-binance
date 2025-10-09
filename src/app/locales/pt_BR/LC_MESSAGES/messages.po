@@ -1,0 +1,476 @@
+# Portuguese (Brazil) translations for PROJECT.
+# Copyright (C) 2025 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-10-09 23:14+0000\n"
+"PO-Revision-Date: 2025-10-09 23:15+0000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: pt_BR\n"
+"Language-Team: pt_BR <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: src/web/templates/arbitrage.html:3 src/web/templates/base.html:19
+msgid "Arbitrage"
+msgstr "Arbitragem"
+
+#: src/web/templates/arbitrage.html:36
+msgid "Arbitrage Opportunities"
+msgstr "Oportunidades de Arbitragem"
+
+#: src/web/templates/arbitrage.html:38
+msgid ""
+"Scanning for triangular arbitrage opportunities on Binance. This is a "
+"simulation and does not execute trades."
+msgstr "Buscando por oportunidades de arbitragem triangular na Binance. Esta é uma simulação e não executa ordens reais."
+
+#: src/web/templates/arbitrage.html:44
+msgid "Scanning for opportunities..."
+msgstr "Buscando por oportunidades..."
+
+#: src/web/templates/arbitrage.html:51
+msgid "Path"
+msgstr "Caminho"
+
+#: src/web/templates/arbitrage.html:52
+#, python-format
+msgid "Estimated Profit (%%)"
+msgstr "Lucro Estimado (%%)"
+
+#: src/web/templates/arbitrage.html:53
+msgid "Trade Rates"
+msgstr "Taxas de Negociação"
+
+#: src/web/templates/arbitrage.html:61
+#, python-format
+msgid ""
+"Profit calculation includes an estimated trading fee of %(fee)s%% per "
+"trade."
+msgstr "* O cálculo do lucro inclui uma taxa de negociação estimada de %(fee)s%% por ordem."
+
+#: src/web/templates/arbitrage.html:65
+msgid "No profitable arbitrage opportunities found at the moment."
+msgstr "Nenhuma oportunidade de arbitragem lucrativa encontrada no momento."
+
+#: src/web/templates/arbitrage.html:70
+msgid "Rescan"
+msgstr "Buscar Novamente"
+
+#: src/web/templates/arbitrage.html:77
+msgid "Failed to fetch data:"
+msgstr "Falha ao buscar dados:"
+
+#: src/web/templates/base.html:6 src/web/templates/base.html:40
+msgid "Crypto Rebalancing Bot"
+msgstr "Bot Rebalanceador de Cripto"
+
+#: src/web/templates/base.html:14
+msgid "Rebalancer Bot"
+msgstr "Bot Rebalanceador"
+
+#: src/web/templates/base.html:16 src/web/templates/dashboard.html:3
+#: src/web/templates/dashboard.html:9
+msgid "Dashboard"
+msgstr "Painel"
+
+#: src/web/templates/base.html:17 src/web/templates/config.html:3
+#: src/web/templates/config.html:6
+msgid "Configuration"
+msgstr "Configuração"
+
+#: src/web/templates/base.html:18 src/web/templates/history.html:3
+msgid "History"
+msgstr "Histórico"
+
+#: src/web/templates/base.html:23
+msgid "Logged in as:"
+msgstr "Logado como:"
+
+#: src/web/templates/base.html:24
+msgid "Logout"
+msgstr "Sair"
+
+#: src/web/templates/base.html:40
+msgid "API Documentation"
+msgstr "Documentação da API"
+
+#: src/web/templates/config.html:7
+msgid ""
+"Manage the bot settings here. API keys are encrypted and never shown "
+"again after saving."
+msgstr "Gerencie as configurações do bot aqui. As chaves de API são criptografadas e nunca mais são mostradas após salvar."
+
+#: src/web/templates/config.html:12
+msgid "Security and Credentials"
+msgstr "Segurança e Credenciais"
+
+#: src/web/templates/config.html:15
+msgid "Change Admin Password"
+msgstr "Alterar Senha do Administrador"
+
+#: src/web/templates/config.html:16
+msgid "Leave blank to keep the current password"
+msgstr "Deixe em branco para manter a senha atual"
+
+#: src/web/templates/config.html:19
+msgid "API Keys"
+msgstr "Chaves de API"
+
+#: src/web/templates/config.html:21
+msgid "Binance API Key"
+msgstr "Chave de API da Binance"
+
+#: src/web/templates/config.html:22 src/web/templates/config.html:26
+#: src/web/templates/config.html:30
+msgid "Already set, enter a new key to change"
+msgstr "Já definida, insira uma nova chave para alterar"
+
+#: src/web/templates/config.html:22
+msgid "Enter your Binance API key"
+msgstr "Insira sua chave de API da Binance"
+
+#: src/web/templates/config.html:25
+msgid "Binance Secret Key"
+msgstr "Chave Secreta da Binance"
+
+#: src/web/templates/config.html:26
+msgid "Enter your Binance secret key"
+msgstr "Insira sua chave secreta da Binance"
+
+#: src/web/templates/config.html:29
+msgid "CoinMarketCap API Key"
+msgstr "Chave de API do CoinMarketCap"
+
+#: src/web/templates/config.html:30
+msgid "Enter your CoinMarketCap API key"
+msgstr "Insira sua chave de API do CoinMarketCap"
+
+#: src/web/templates/config.html:32 src/web/templates/config.html:101
+msgid "Test API Keys"
+msgstr "Testar Chaves de API"
+
+#: src/web/templates/config.html:35
+msgid "Rebalancing Strategy"
+msgstr "Estratégia de Rebalanceamento"
+
+#: src/web/templates/config.html:38
+msgid "Dry Run Mode"
+msgstr "Modo de Simulação"
+
+#: src/web/templates/config.html:40
+msgid "Enabled (Simulate trades, no real orders)"
+msgstr "Ativado (Simular transações, sem ordens reais)"
+
+#: src/web/templates/config.html:41
+msgid "Disabled (Execute real trades)"
+msgstr "Desativado (Executar transações reais)"
+
+#: src/web/templates/config.html:45
+msgid "Strategy Type"
+msgstr "Tipo de Estratégia"
+
+#: src/web/templates/config.html:47
+msgid "Periodic"
+msgstr "Periódica"
+
+#: src/web/templates/config.html:48
+msgid "Threshold"
+msgstr "Por Limite"
+
+#: src/web/templates/config.html:52
+msgid "Periodic Interval (Hours)"
+msgstr "Intervalo Periódico (Horas)"
+
+#: src/web/templates/config.html:56
+#, python-format
+msgid "Rebalancing Threshold (%%)"
+msgstr "Limite de Rebalanceamento (%%)"
+
+#: src/web/templates/config.html:61
+msgid "Portfolio and Trading"
+msgstr "Portfólio e Negociação"
+
+#: src/web/templates/config.html:64
+msgid "Base Pair"
+msgstr "Par Base"
+
+#: src/web/templates/config.html:68
+msgid "Max CoinMarketCap Rank"
+msgstr "Rank Máximo no CoinMarketCap"
+
+#: src/web/templates/config.html:72
+msgid "Minimum Trade Value (USD)"
+msgstr "Valor Mínimo da Transação (USD)"
+
+#: src/web/templates/config.html:76
+msgid "Target Allocations"
+msgstr "Alocações Alvo"
+
+#: src/web/templates/config.html:80 src/web/templates/config.html:103
+msgid "Asset (e.g., BTC)"
+msgstr "Ativo (ex: BTC)"
+
+#: src/web/templates/config.html:86
+msgid "Add Asset"
+msgstr "Adicionar Ativo"
+
+#: src/web/templates/config.html:90 src/web/templates/config.html:104
+msgid "Save Configuration"
+msgstr "Salvar Configuração"
+
+#: src/web/templates/config.html:95
+msgid "Saving..."
+msgstr "Salvando..."
+
+#: src/web/templates/config.html:96
+msgid "Configuration saved successfully!"
+msgstr "Configuração salva com sucesso!"
+
+#: src/web/templates/config.html:97
+msgid "Failed to save:"
+msgstr "Falha ao salvar:"
+
+#: src/web/templates/config.html:98
+msgid "Unknown error"
+msgstr "Erro desconhecido"
+
+#: src/web/templates/config.html:99
+msgid "An error occurred:"
+msgstr "Ocorreu um erro:"
+
+#: src/web/templates/config.html:100
+msgid "Testing..."
+msgstr "Testando..."
+
+#: src/web/templates/config.html:102
+msgid "API Key Test Results:"
+msgstr "Resultados do Teste de Chave de API:"
+
+#: src/web/templates/dashboard.html:10
+msgid ""
+"Manually trigger a rebalance run. The bot will use the currently saved "
+"configuration."
+msgstr "Acione manualmente uma execução de rebalanceamento. O bot usará a configuração salva atualmente."
+
+#: src/web/templates/dashboard.html:12
+msgid "Run Rebalance"
+msgstr "Executar Rebalanceamento"
+
+#: src/web/templates/dashboard.html:13
+msgid "Run Dry Run"
+msgstr "Executar Simulação"
+
+#: src/web/templates/dashboard.html:18
+msgid "Last Run Status"
+msgstr "Status da Última Execução"
+
+#: src/web/templates/dashboard.html:20 src/web/templates/history.html:27
+msgid "Run ID:"
+msgstr "ID da Execução:"
+
+#: src/web/templates/dashboard.html:21
+msgid "Date & Time:"
+msgstr "Data e Hora:"
+
+#: src/web/templates/dashboard.html:22 src/web/templates/history.html:14
+msgid "Status:"
+msgstr "Status:"
+
+#: src/web/templates/dashboard.html:22 src/web/templates/history.html:16
+msgid "Dry Run"
+msgstr "Simulação"
+
+#: src/web/templates/dashboard.html:23
+msgid "Base Pair:"
+msgstr "Par Base:"
+
+#: src/web/templates/dashboard.html:24
+msgid "Trigger:"
+msgstr "Disparo:"
+
+#: src/web/templates/dashboard.html:24 src/web/templates/history.html:20
+msgid "Scheduled"
+msgstr "Automático"
+
+#: src/web/templates/dashboard.html:24 src/web/templates/history.html:20
+msgid "Manual"
+msgstr "Manual"
+
+#: src/web/templates/dashboard.html:25 src/web/templates/history.html:23
+msgid "Summary:"
+msgstr "Resumo:"
+
+#: src/web/templates/dashboard.html:27 src/web/templates/history.html:66
+msgid "Total Fee Cost (Estimated):"
+msgstr "Custo Total de Taxas (Estimado):"
+
+#: src/web/templates/dashboard.html:31
+msgid "Projected Balances After Run"
+msgstr "Saldos Projetados Após a Execução"
+
+#: src/web/templates/dashboard.html:35 src/web/templates/dashboard.html:96
+#: src/web/templates/history.html:42 src/web/templates/history.html:70
+msgid "Asset"
+msgstr "Ativo"
+
+#: src/web/templates/dashboard.html:36 src/web/templates/history.html:71
+msgid "New Quantity"
+msgstr "Nova Quantidade"
+
+#: src/web/templates/dashboard.html:37 src/web/templates/history.html:72
+#, python-format
+msgid "New Value (%(base_pair)s)"
+msgstr "Novo Valor (%(base_pair)s)"
+
+#: src/web/templates/dashboard.html:38 src/web/templates/history.html:73
+msgid "New Value (USD)"
+msgstr "Novo Valor (USD)"
+
+#: src/web/templates/dashboard.html:45
+msgid "No projected balance data available."
+msgstr "Sem dados de saldos projetados."
+
+#: src/web/templates/dashboard.html:73 src/web/templates/history.html:30
+msgid "Errors:"
+msgstr "Erros:"
+
+#: src/web/templates/dashboard.html:82
+msgid "No rebalance runs have been recorded yet."
+msgstr "Nenhuma execução de rebalanceamento foi registrada ainda."
+
+#: src/web/templates/dashboard.html:87
+msgid "Current Balances"
+msgstr "Saldos Atuais"
+
+#: src/web/templates/dashboard.html:88
+msgid "Loading balances..."
+msgstr "Carregando saldos..."
+
+#: src/web/templates/dashboard.html:97 src/web/templates/history.html:44
+msgid "Quantity"
+msgstr "Quantidade"
+
+#: src/web/templates/dashboard.html:98
+msgid "Value (Base)"
+msgstr "Valor (Base)"
+
+#: src/web/templates/dashboard.html:99 src/web/templates/history.html:45
+msgid "Value (USD)"
+msgstr "Valor (USD)"
+
+#: src/web/templates/dashboard.html:111
+msgid "Portfolio Value History"
+msgstr "Histórico de Valor da Carteira"
+
+#: src/web/templates/dashboard.html:112
+msgid "No history available yet."
+msgstr "Nenhum histórico disponível ainda."
+
+#: src/web/templates/dashboard.html:119
+msgid "Performance by Asset"
+msgstr "Desempenho por Ativo"
+
+#: src/web/templates/dashboard.html:120
+msgid "No history available for assets."
+msgstr "Nenhum histórico disponível para os ativos."
+
+#: src/web/templates/history.html:6
+msgid "Rebalancing History"
+msgstr "Histórico de Rebalanceamento"
+
+#: src/web/templates/history.html:7
+msgid "Showing the last 100 runs."
+msgstr "Mostrando as últimas 100 execuções."
+
+#: src/web/templates/history.html:13
+msgid "Date:"
+msgstr "Data:"
+
+#: src/web/templates/history.html:15
+msgid "Mode:"
+msgstr "Modo:"
+
+#: src/web/templates/history.html:17
+msgid "Live"
+msgstr "Real"
+
+#: src/web/templates/history.html:19
+msgid "Run:"
+msgstr "Execução:"
+
+#: src/web/templates/history.html:21
+msgid "Pair:"
+msgstr "Par:"
+
+#: src/web/templates/history.html:38
+msgid "Trades Executed"
+msgstr "Transações Executadas"
+
+#: src/web/templates/history.html:43
+msgid "Side"
+msgstr "Ação"
+
+#: src/web/templates/history.html:46
+msgid "Fee (USD)"
+msgstr "Taxa (USD)"
+
+#: src/web/templates/history.html:65
+msgid "Projected Balances"
+msgstr "Saldos Projetados"
+
+#: src/web/templates/history.html:99
+msgid "No history found."
+msgstr "Nenhum histórico encontrado."
+
+#: src/web/templates/login-failed.html:3 src/web/templates/login-failed.html:24
+msgid "Login Failed"
+msgstr "Falha no Login"
+
+#: src/web/templates/login-failed.html:27
+msgid "Invalid username or password."
+msgstr "Nome de usuário ou senha inválidos."
+
+#: src/web/templates/login-failed.html:28
+msgid "Try Again"
+msgstr "Tente Novamente"
+
+#: src/web/templates/login.html:3 src/web/templates/login.html:24
+#: src/web/templates/login.html:37
+msgid "Login"
+msgstr "Login"
+
+#: src/web/templates/login.html:25
+msgid "Please log in to continue."
+msgstr "Por favor, faça o login para continuar."
+
+#: src/web/templates/login.html:30 src/web/templates/setup.html:31
+msgid "Username"
+msgstr "Nome de Usuário"
+
+#: src/web/templates/login.html:34 src/web/templates/setup.html:35
+msgid "Password"
+msgstr "Senha"
+
+#: src/web/templates/setup.html:6
+msgid "Welcome - Setup Required"
+msgstr "Bem-vindo - Configuração Necessária"
+
+#: src/web/templates/setup.html:25
+msgid "Initial Setup"
+msgstr "Configuração Inicial"
+
+#: src/web/templates/setup.html:26
+msgid "Please create your admin account to continue."
+msgstr "Por favor, crie sua conta de administrador para continuar."
+
+#: src/web/templates/setup.html:38
+msgid "Save and Continue"
+msgstr "Salvar e Continuar"

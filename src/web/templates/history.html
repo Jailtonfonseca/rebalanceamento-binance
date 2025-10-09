@@ -1,33 +1,33 @@
 {% extends "base.html" %}
 
-{% block title %}Histórico - {{ super() }}{% endblock %}
+{% block title %}{{ _('History') }} - {{ super() }}{% endblock %}
 
 {% block content %}
-<h2>Histórico de Rebalanceamento</h2>
-<p>Mostrando as últimas 100 execuções.</p>
+<h2>{{ _('Rebalancing History') }}</h2>
+<p>{{ _('Showing the last 100 runs.') }}</p>
 
 <div class="history-list">
     {% for run in history %}
     <div class="card history-card">
         <div class="history-summary" onclick="toggleDetails('details-{{ run.id }}')">
-            <div class="summary-item"><strong>Data:</strong><br>{{ run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</div>
-            <div class="summary-item"><strong>Status:</strong><br><span class="status-{{ run.status.lower() }}">{{ run.status }}</span></div>
-            <div class="summary-item"><strong>Modo:</strong><br>
-                {% if run.is_dry_run %}<span class="mode-dry">Simulação</span>
-                {% else %}<span class="mode-live">Real</span>{% endif %}
+            <div class="summary-item"><strong>{{ _('Date:') }}</strong><br>{{ run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</div>
+            <div class="summary-item"><strong>{{ _('Status:') }}</strong><br><span class="status-{{ run.status.lower() }}">{{ run.status }}</span></div>
+            <div class="summary-item"><strong>{{ _('Mode:') }}</strong><br>
+                {% if run.is_dry_run %}<span class="mode-dry">{{ _('Dry Run') }}</span>
+                {% else %}<span class="mode-live">{{ _('Live') }}</span>{% endif %}
             </div>
-            <div class="summary-item"><strong>Execução:</strong><br>
-                {% if run.trigger == 'scheduled' %}<span class="mode-live">Automática</span>{% else %}<span class="mode-dry">Manual</span>{% endif %}<br>
-                <span class="summary-subtext">Par: {{ run.base_pair }}</span>
+            <div class="summary-item"><strong>{{ _('Run:') }}</strong><br>
+                {% if run.trigger == 'scheduled' %}<span class="mode-live">{{ _('Scheduled') }}</span>{% else %}<span class="mode-dry">{{ _('Manual') }}</span>{% endif %}<br>
+                <span class="summary-subtext">{{ _('Pair:') }} {{ run.base_pair }}</span>
             </div>
-            <div class="summary-item summary-message"><strong>Resumo:</strong><br>{{ run.summary_message }}</div>
+            <div class="summary-item summary-message"><strong>{{ _('Summary:') }}</strong><br>{{ run.summary_message }}</div>
             <div class="summary-item toggle-icon">▼</div>
         </div>
         <div id="details-{{ run.id }}" class="history-details" style="display: none;">
-            <p><strong>ID da Execução:</strong> {{ run.run_id }}</p>
+            <p><strong>{{ _('Run ID:') }}</strong> {{ run.run_id }}</p>
             {% if run.errors %}
             <div class="errors">
-                <strong>Erros:</strong>
+                <strong>{{ _('Errors:') }}</strong>
                 <ul>
                     {% for error in run.errors %}<li>{{ error }}</li>{% endfor %}
                 </ul>
@@ -35,15 +35,15 @@
             {% endif %}
 
             {% if run.trades_executed %}
-            <h4>Transações Executadas</h4>
+            <h4>{{ _('Trades Executed') }}</h4>
             <table>
                 <thead>
                     <tr>
-                        <th>Ativo</th>
-                        <th>Ação</th>
-                        <th>Quantidade</th>
-                        <th>Valor (USD)</th>
-                        <th>Taxa (USD)</th>
+                        <th>{{ _('Asset') }}</th>
+                        <th>{{ _('Side') }}</th>
+                        <th>{{ _('Quantity') }}</th>
+                        <th>{{ _('Value (USD)') }}</th>
+                        <th>{{ _('Fee (USD)') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,15 +62,15 @@
 
             {% if run.projected_balances %}
             <div class="details-section">
-                <h4>Saldos Projetados</h4>
-                <p><strong>Custo Total de Taxas (Estimado):</strong> ${{ "%.2f"|format(run.total_fees_usd|float) }}</p>
+                <h4>{{ _('Projected Balances') }}</h4>
+                <p><strong>{{ _('Total Fee Cost (Estimated):') }}</strong> ${{ "%.2f"|format(run.total_fees_usd|float) }}</p>
                 <table>
                     <thead>
                         <tr>
-                            <th>Ativo</th>
-                            <th>Nova Quantidade</th>
-                            <th>Novo Valor ({{ run.base_pair }})</th>
-                            <th>Novo Valor (USD)</th>
+                            <th>{{ _('Asset') }}</th>
+                            <th>{{ _('New Quantity') }}</th>
+                            <th>{{ _('New Value (%(base_pair)s)', base_pair=run.base_pair) }}</th>
+                            <th>{{ _('New Value (USD)') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -96,7 +96,7 @@
         </div>
     </div>
     {% else %}
-    <div class="card"><p>Nenhum histórico encontrado.</p></div>
+    <div class="card"><p>{{ _('No history found.') }}</p></div>
     {% endfor %}
 </div>
 

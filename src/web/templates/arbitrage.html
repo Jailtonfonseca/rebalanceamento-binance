@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}{{ _('Arbitrage') }} - {{ super() }}{% endblock %}
+
 {% block head %}
 {{ super() }}
 <style>
@@ -31,24 +33,24 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Arbitrage Opportunities</h2>
+                    <h2 class="card-title">{{ _('Arbitrage Opportunities') }}</h2>
                     <p class="card-subtitle text-muted">
-                        Scanning for triangular arbitrage opportunities on Binance. This is a simulation and does not execute trades.
+                        {{ _('Scanning for triangular arbitrage opportunities on Binance. This is a simulation and does not execute trades.') }}
                     </p>
                 </div>
                 <div class="card-body">
                     <div id="loading-indicator" class="text-center">
                         <div class="loader"></div>
-                        <p>Scanning for opportunities...</p>
+                        <p id="loading-text">{{ _('Scanning for opportunities...') }}</p>
                     </div>
                     <div id="error-message" class="alert alert-danger" style="display: none;"></div>
                     <div id="opportunities-table" style="display: none;">
                         <table class="table table-striped" id="arbitrage-table">
                             <thead>
                                 <tr>
-                                    <th>Path</th>
-                                    <th>Estimated Profit (%)</th>
-                                    <th>Trade Rates</th>
+                                    <th>{{ _('Path') }}</th>
+                                    <th>{{ _('Estimated Profit (%%)') }}</th>
+                                    <th>{{ _('Trade Rates') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -56,22 +58,23 @@
                             </tbody>
                         </table>
                         <p class="text-muted small">
-                            * Profit calculation includes an estimated trading fee of {{ (TRADING_FEE * 100) }}% per trade.
+                            * {{ _('Profit calculation includes an estimated trading fee of %(fee)s%% per trade.', fee=(TRADING_FEE * 100)) }}
                         </p>
                     </div>
                      <div id="no-opportunities" class="text-center" style="display: none;">
-                        <p>No profitable arbitrage opportunities found at the moment.</p>
+                        <p>{{ _('No profitable arbitrage opportunities found at the moment.') }}</p>
                     </div>
                 </div>
                 <div class="card-footer text-right">
                     <button id="rescan-button" class="btn btn-primary">
-                        <i class="fas fa-sync"></i> Rescan
+                        <i class="fas fa-sync"></i> {{ _('Rescan') }}
                     </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<div id="js-strings" data-fetch-failed="{{ _('Failed to fetch data:') }}" style="display: none;"></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -81,6 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorMessageDiv = document.getElementById('error-message');
     const tableBody = document.querySelector('#arbitrage-table tbody');
     const rescanButton = document.getElementById('rescan-button');
+    const jsStrings = document.getElementById('js-strings').dataset;
 
     async function fetchOpportunities() {
         // Show loading state
@@ -124,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             console.error('Error fetching arbitrage opportunities:', error);
-            errorMessageDiv.textContent = `Failed to fetch data: ${error.message}`;
+            errorMessageDiv.textContent = `${jsStrings.fetchFailed} ${error.message}`;
             errorMessageDiv.style.display = 'block';
         } finally {
             // Hide loading state

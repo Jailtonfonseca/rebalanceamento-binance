@@ -1,48 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}Painel - {{ super() }}{% endblock %}
+{% block title %}{{ _('Dashboard') }} - {{ super() }}{% endblock %}
 
 {% block content %}
 <div id="alert-placeholder"></div>
 
 <div class="card">
-    <h2>Painel de Controle</h2>
-    <p>Acione manualmente uma execução de rebalanceamento. O bot usará a configuração salva atualmente.</p>
+    <h2>{{ _('Dashboard') }}</h2>
+    <p>{{ _('Manually trigger a rebalance run. The bot will use the currently saved configuration.') }}</p>
     <div class="form-actions">
-        <button id="run-rebalance-btn" class="button">Executar Rebalanceamento</button>
-        <button id="run-dry-run-btn" class="button secondary">Executar Simulação</button>
+        <button id="run-rebalance-btn" class="button">{{ _('Run Rebalance') }}</button>
+        <button id="run-dry-run-btn" class="button secondary">{{ _('Run Dry Run') }}</button>
     </div>
 </div>
 
 <div class="card">
-    <h2>Status da Última Execução</h2>
+    <h2>{{ _('Last Run Status') }}</h2>
     {% if last_run %}
-    <p><strong>ID da Execução:</strong> {{ last_run.run_id }}</p>
-    <p><strong>Data e Hora:</strong> {{ last_run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
-    <p><strong>Status:</strong> <span class="status-{{ last_run.status.lower() }}">{{ last_run.status }}</span> {% if last_run.is_dry_run %}(Simulação){% endif %}</p>
-    <p><strong>Par Base:</strong> {{ last_run.base_pair }}</p>
-    <p><strong>Disparo:</strong> {% if last_run.trigger == 'scheduled' %}<span class="mode-live">Automático</span>{% else %}<span class="mode-dry">Manual</span>{% endif %}</p>
-    <p><strong>Resumo:</strong> {{ last_run.summary_message }}</p>
+    <p><strong>{{ _('Run ID:') }}</strong> {{ last_run.run_id }}</p>
+    <p><strong>{{ _('Date & Time:') }}</strong> {{ last_run.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
+    <p><strong>{{ _('Status:') }}</strong> <span class="status-{{ last_run.status.lower() }}">{{ last_run.status }}</span> {% if last_run.is_dry_run %}({{ _('Dry Run') }}){% endif %}</p>
+    <p><strong>{{ _('Base Pair:') }}</strong> {{ last_run.base_pair }}</p>
+    <p><strong>{{ _('Trigger:') }}</strong> {% if last_run.trigger == 'scheduled' %}<span class="mode-live">{{ _('Scheduled') }}</span>{% else %}<span class="mode-dry">{{ _('Manual') }}</span>{% endif %}</p>
+    <p><strong>{{ _('Summary:') }}</strong> {{ last_run.summary_message }}</p>
     {% if last_run.total_fees_usd is not none %}
-    <p><strong>Custo Total de Taxas (Estimado):</strong> ${{ "%.2f"|format(last_run.total_fees_usd) }}</p>
+    <p><strong>{{ _('Total Fee Cost (Estimated):') }}</strong> ${{ "%.2f"|format(last_run.total_fees_usd) }}</p>
     {% endif %}
 
     {% if last_run.projected_balances %}
-    <h4>Saldos Projetados Após a Execução</h4>
+    <h4>{{ _('Projected Balances After Run') }}</h4>
     <table>
         <thead>
             <tr>
-                <th>Ativo</th>
-                <th>Nova Quantidade</th>
-                <th>Novo Valor ({{ last_run.base_pair }})</th>
-                <th>Novo Valor (USD)</th>
+                <th>{{ _('Asset') }}</th>
+                <th>{{ _('New Quantity') }}</th>
+                <th>{{ _('New Value (%(base_pair)s)', base_pair=last_run.base_pair) }}</th>
+                <th>{{ _('New Value (USD)') }}</th>
             </tr>
         </thead>
         <tbody>
             {% set rows = sorted_balances or [] %}
             {% if rows|length == 0 %}
             <tr>
-                <td colspan="4">Sem dados de saldos projetados.</td>
+                <td colspan="4">{{ _('No projected balance data available.') }}</td>
             </tr>
             {% else %}
             {% for asset, details in rows %}
@@ -70,7 +70,7 @@
 
     {% if last_run.errors %}
     <div class="errors">
-        <strong>Erros:</strong>
+        <strong>{{ _('Errors:') }}</strong>
         <ul>
             {% for error in last_run.errors %}
             <li>{{ error }}</li>
@@ -79,13 +79,13 @@
     </div>
     {% endif %}
     {% else %}
-    <p>Nenhuma execução de rebalanceamento foi registrada ainda.</p>
+    <p>{{ _('No rebalance runs have been recorded yet.') }}</p>
     {% endif %}
 </div>
 
 <div class="card">
-    <h2>Saldos Atuais</h2>
-    <div id="balances-loading">Carregando saldos...</div>
+    <h2>{{ _('Current Balances') }}</h2>
+    <div id="balances-loading">{{ _('Loading balances...') }}</div>
     <div id="balances-content" style="display:none;">
         <h3 id="total-balance-base" class="balance-primary">0</h3>
         <p id="total-balance-usd" class="balance-secondary"></p>
@@ -93,10 +93,10 @@
         <table>
             <thead>
                 <tr>
-                    <th>Ativo</th>
-                    <th>Quantidade</th>
-                    <th id="value-header-base">Valor (Base)</th>
-                    <th id="value-header-usd">Valor (USD)</th>
+                    <th>{{ _('Asset') }}</th>
+                    <th>{{ _('Quantity') }}</th>
+                    <th id="value-header-base">{{ _('Value (Base)') }}</th>
+                    <th id="value-header-usd">{{ _('Value (USD)') }}</th>
                 </tr>
             </thead>
             <tbody id="balances-table-body">
@@ -108,16 +108,16 @@
 </div>
 
 <div class="card">
-    <h2>Histórico de Valor da Carteira</h2>
-    <p id="portfolio-history-empty" class="chart-placeholder" style="display:none;">Nenhum histórico disponível ainda.</p>
+    <h2>{{ _('Portfolio Value History') }}</h2>
+    <p id="portfolio-history-empty" class="chart-placeholder" style="display:none;">{{ _('No history available yet.') }}</p>
     <div id="portfolio-history-wrapper" class="chart-wrapper" style="display:none;">
         <canvas id="portfolio-history-chart" height="220"></canvas>
     </div>
 </div>
 
 <div class="card">
-    <h2>Desempenho por Ativo</h2>
-    <p id="asset-charts-empty" class="chart-placeholder" style="display:none;">Nenhum histórico disponível para os ativos.</p>
+    <h2>{{ _('Performance by Asset') }}</h2>
+    <p id="asset-charts-empty" class="chart-placeholder" style="display:none;">{{ _('No history available for assets.') }}</p>
     <div id="asset-charts-container" class="asset-charts-grid"></div>
 </div>
 
