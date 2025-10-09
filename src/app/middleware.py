@@ -37,6 +37,29 @@ class SetupMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """
+    Adds security headers to all responses.
+    """
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        response = await call_next(request)
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        # A basic Content Security Policy (CSP) to mitigate XSS.
+        # It allows scripts only from the same origin and the Chart.js CDN.
+        # Inline styles are allowed for now, as they are used in the templates.
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline'"
+        )
+        return response
+
+
 class AuthenticationMiddleware(BaseHTTPMiddleware):
     """
     Handles user authentication for protected routes.
