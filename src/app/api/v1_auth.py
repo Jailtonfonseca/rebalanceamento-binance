@@ -23,8 +23,8 @@ async def login(
     if username != settings.admin_user or not verify_password(
         password, settings.password_hash
     ):
-        # Redirect back to login with an error message
-        return RedirectResponse(url="/login?error=Invalid username or password", status_code=303)
+        # Redirect to a dedicated error page to avoid exposing error details
+        return RedirectResponse(url="/login-failed", status_code=303)
 
     # Create an access token
     access_token = create_access_token(data={"sub": username})

@@ -50,4 +50,6 @@ ENV PATH="/home/appuser/venv/bin:$PATH"
 EXPOSE 8080
 
 # The command to run the application from within the src directory
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# By setting PYTHONPATH, we ensure that imports relative to the `src`
+# directory work reliably.
+CMD ["sh", "-c", "PYTHONPATH=src uvicorn app.main:app --host 0.0.0.0 --port 8080"]

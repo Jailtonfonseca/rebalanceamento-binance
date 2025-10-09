@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Login Failed - Crypto Rebalancing Bot{% endblock %}
+
+{% block navigation %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: #f8f9fa;
+    }
+    .login-card {
+        width: 100%;
+        max-width: 400px;
+    }
+</style>
+<div class="card login-card text-center">
+    <div class="card-header">
+        <h1 class="card-title">Login Failed</h1>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-danger">Invalid username or password.</div>
+        <a href="/login" class="btn btn-primary">Try Again</a>
+    </div>
+</div>
+{% endblock %}
