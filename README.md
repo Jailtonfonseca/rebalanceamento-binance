@@ -125,6 +125,18 @@ The web interface has four main sections:
 
 ---
 
+## Future Improvements
+
+This project is fully functional, but there are always opportunities for enhancement. Here are some potential ideas for future development:
+
+-   **Two-Factor Authentication (2FA)**: Add support for TOTP-based 2FA for the admin account to further enhance security.
+-   **Support for More Exchanges**: Integrate other major cryptocurrency exchanges like Coinbase Pro, Kraken, or KuCoin.
+-   **Advanced Analytics**: Implement a dedicated analytics page with more detailed charts, profit/loss tracking over time, and performance comparison against market benchmarks (e.g., BTC, ETH).
+-   **User Notifications**: Add a notification service (e.g., via email, Telegram, or Discord) to alert the user on successful rebalances, errors, or significant portfolio value changes.
+-   **I18n - Internationalization**: Add support for multiple languages in the web interface.
+
+---
+
 ## Development
 
 ### Running Tests
