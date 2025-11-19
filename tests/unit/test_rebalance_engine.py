@@ -74,30 +74,30 @@ def test_simple_rebalance(rebalance_engine, mock_data):
     )
     trades = result["proposed_trades"]
 
-    assert len(trades) == 2  # Sell BTC, Buy ETH. USDT change handled by others.
+    assert len(trades) == 1  # Sell BTC. Buy ETH skipped due to insufficient funds.
 
     sell_trade = next(t for t in trades if t.side == "SELL")
-    buy_trade = next(t for t in trades if t.side == "BUY")
+    buy_trade = next((t for t in trades if t.side == "BUY"), None)
 
-    # Based on eligible value of 95k: Sell 18k BTC, Buy 8.5k ETH
+    # Based on TOTAL value of 100k:
+    # Sell BTC: current 75k, target 60k -> Sell 15k
+    # Buy ETH: current 20k, target 30k -> Buy 10k
     assert sell_trade.asset == "BTC"
-    assert sell_trade.estimated_value_base == pytest.approx(18000, rel=1e-3)
-    assert sell_trade.estimated_value_usd == pytest.approx(18000, rel=1e-3)
-    assert sell_trade.quantity == pytest.approx(18000 / 50000, rel=1e-3)
+    assert sell_trade.estimated_value_base == pytest.approx(15000, rel=1e-3)
+    assert sell_trade.estimated_value_usd == pytest.approx(15000, rel=1e-3)
+    assert sell_trade.quantity == pytest.approx(15000 / 50000, rel=1e-3)
 
-    assert buy_trade.asset == "ETH"
-    assert buy_trade.estimated_value_base == pytest.approx(8500, rel=1e-3)
-    assert buy_trade.estimated_value_usd == pytest.approx(8500, rel=1e-3)
-    assert buy_trade.quantity == pytest.approx(8500 / 2000, rel=1e-3)
+    assert buy_trade is None
 
 
 def test_trade_below_min_value_is_ignored(rebalance_engine, mock_data):
     """Test that a trade with a value below min_trade_value_usd is ignored."""
-    # Current allocs: BTC=78.95%, ETH=21.05%. Set targets very close to this.
-    target_allocations = {"BTC": 78.9, "ETH": 21.1, "USDT": 0.0}
+    # Based on total value: Current allocs: BTC=75%, ETH=20%. Set targets very close.
+    target_allocations = {"BTC": 75.05, "ETH": 20.0, "USDT": 4.95}
     mock_data["min_trade_value_usd"] = 100.0  # Set a high min trade value
 
-    # With new logic, delta for BTC is now ~$45, still below the $100 min trade value.
+    # Delta for BTC is 0.05% of 100k = $50, which is below the $100 min trade value.
+    # All other deltas are smaller. No trades should be proposed.
 
     result = rebalance_engine.run(
         balances=mock_data["balances"],
@@ -132,9 +132,9 @@ def test_trade_below_min_notional_is_ignored(rebalance_engine, mock_data):
     )
     trades = result["proposed_trades"]
 
-    # Only the ETH trade should remain
-    assert len(trades) == 1
-    assert trades[0].asset == "ETH"
+    # No trades should be proposed. The BTC trade is below min notional,
+    # and the ETH trade is skipped due to insufficient funds.
+    assert len(trades) == 0
 
 
 def test_asset_not_in_cmc_list_is_ignored(rebalance_engine, mock_data):
@@ -182,7 +182,46 @@ def test_new_asset_to_buy(rebalance_engine, mock_data):
     buy_bnb_trade = next((t for t in trades if t.asset == "BNB"), None)
     assert buy_bnb_trade is not None
     assert buy_bnb_trade.side == "BUY"
-    # Target value is 10% of eligible value (95k) = 9.5k
-    assert buy_bnb_trade.estimated_value_base == pytest.approx(9500, rel=1e-3)
-    assert buy_bnb_trade.estimated_value_usd == pytest.approx(9500, rel=1e-3)
-    assert buy_bnb_trade.quantity == pytest.approx(9500 / 300.0, rel=1e-3)
+    # Target value is 10% of total value (110k) = 11k
+    assert buy_bnb_trade.estimated_value_base == pytest.approx(11000, rel=1e-3)
+    assert buy_bnb_trade.estimated_value_usd == pytest.approx(11000, rel=1e-3)
+    assert buy_bnb_trade.quantity == pytest.approx(11000 / 300.0, rel=1e-3)
+
+
+def test_projected_balances_with_buy_fee(rebalance_engine, mock_data):
+    """
+    Test that projected balances are calculated correctly for a BUY trade,
+    ensuring the fee is paid from the base currency.
+    """
+    balances = {"BTC": 1.0, "USDT": 50000}  # BTC=50k, USDT=50k, Total=100k
+    target_allocations = {"BTC": 80.0, "USDT": 20.0}  # Target: BTC=80k, USDT=20k
+    trade_fee_pct = 0.1  # Buy $30k worth of BTC
+
+    result = rebalance_engine.run(
+        balances=balances,
+        prices=mock_data["prices"],
+        exchange_info=mock_data["exchange_info"],
+        target_allocations=target_allocations,
+        eligible_cmc_symbols=mock_data["eligible_cmc_symbols"],
+        base_pair=mock_data["base_pair"],
+        min_trade_value_usd=mock_data["min_trade_value_usd"],
+        trade_fee_pct=trade_fee_pct,
+    )
+
+    projected = result["projected_balances"]
+    buy_trade = result["proposed_trades"][0]
+
+    # Sanity check the trade proposal
+    assert buy_trade.asset == "BTC"
+    assert buy_trade.side == "BUY"
+    assert buy_trade.estimated_value_base == pytest.approx(30000, rel=1e-3)
+    assert buy_trade.quantity == pytest.approx(0.6, rel=1e-3)
+
+    # Verify projected balances (the CORRECT calculation)
+    # Initial BTC was 1.0, we bought 0.6. Should be 1.6.
+    assert projected["BTC"]["quantity"] == pytest.approx(1.0 + 0.6)
+
+    # Initial USDT was 50000. We spent 30000 on BTC and 0.1% fee on that.
+    # Fee = 30000 * 0.001 = 30 USDT. Total cost = 30030 USDT.
+    # Remaining USDT = 50000 - 30030 = 19970 USDT.
+    assert projected["USDT"]["quantity"] == pytest.approx(19970)

@@ -115,7 +115,7 @@ class RebalanceEngine:
             f"Total portfolio value (including base pair): ${total_portfolio_value:,.2f}"
         )
 
-        if total_eligible_value == 0:
+        if total_portfolio_value == 0:
             logger.warning("Total portfolio value is zero. Nothing to rebalance.")
             return {
                 "proposed_trades": [],
@@ -131,14 +131,14 @@ class RebalanceEngine:
 
             current_value = current_portfolio_values.get(asset, 0.0)
             current_alloc_pct = (
-                (current_value / total_eligible_value) * 100
-                if total_eligible_value
+                (current_value / total_portfolio_value) * 100
+                if total_portfolio_value
                 else 0
             )
             target_alloc_pct = target_allocations.get(asset, 0.0)
 
             delta_pct = target_alloc_pct - current_alloc_pct
-            delta_value_base = (delta_pct / 100) * total_eligible_value
+            delta_value_base = (delta_pct / 100) * total_portfolio_value
 
             if base_to_usd is not None:
                 delta_value_threshold = abs(delta_value_base) * base_to_usd
@@ -203,6 +203,20 @@ class RebalanceEngine:
             side = "BUY" if delta_value_base > 0 else "SELL"
             reason = f"Target: {target_alloc_pct:.2f}%, Current: {current_alloc_pct:.2f}%, Delta: {delta_pct:.2f}%"
 
+            # Check if there are enough funds for a BUY
+            if side == "BUY":
+                cost = final_trade_value * (1 + trade_fee_pct / 100)
+                if cost > balances.get(base_pair, 0.0):
+                    logger.warning(
+                        "Insufficient funds to place BUY order for %s. Need %s %s, have %s %s",
+                        asset,
+                        cost,
+                        base_pair,
+                        balances.get(base_pair, 0.0),
+                        base_pair,
+                    )
+                    continue
+
             proposed_trades.append(
                 ProposedTrade(
                     symbol=symbol,
@@ -233,14 +247,17 @@ class RebalanceEngine:
             base_qty_change = trade.estimated_value_base
 
             if trade.side == "BUY":
-                # Assume fee is paid from the received asset (Binance standard)
+                # Fee is paid from the base pair (e.g., USDT)
                 projected_balances[trade.asset] = projected_balances.get(
                     trade.asset, 0
-                ) + (asset_qty_change * (1 - trade_fee_pct / 100))
-                projected_balances[base_pair] -= base_qty_change
+                ) + asset_qty_change
+                # Cost includes value of asset plus the fee
+                projected_balances[base_pair] -= base_qty_change * (
+                    1 + trade_fee_pct / 100
+                )
             else:  # SELL
                 projected_balances[trade.asset] -= asset_qty_change
-                # Fee is deducted from the quote asset received
+                # Revenue is value of asset minus the fee
                 projected_balances[base_pair] += base_qty_change * (
                     1 - trade_fee_pct / 100
                 )

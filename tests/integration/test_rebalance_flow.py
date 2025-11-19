@@ -114,37 +114,30 @@ async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_m
     # --- Assertions ---
     # Target: BTC 60%, ETH 40%.
     # Sell BTC: 12% of 100k = 12k. Buy ETH: 22% of 100k = 22k.
+    # The BUY trade will be skipped due to insufficient funds.
     assert result.status == "DRY_RUN"
     assert "Simulação concluída" in result.message
-    assert len(result.trades) == 2
+    assert len(result.trades) == 1
 
     sell_trade = next((t for t in result.trades if t.side == "SELL"), None)
     buy_trade = next((t for t in result.trades if t.side == "BUY"), None)
 
     assert sell_trade is not None
+    assert buy_trade is None
     assert sell_trade.asset == "BTC"
-    # With the new logic, rebalancing is based on the eligible asset value ($90k), not total portfolio value ($100k)
-    # Target values: BTC=54k, ETH=36k. Current: BTC=72k, ETH=18k.
-    # Deltas: Sell 18k BTC, Buy 18k ETH.
-    assert sell_trade.estimated_value_base == pytest.approx(18000)
-    assert sell_trade.estimated_value_usd == pytest.approx(18000)
-    assert sell_trade.fee_cost_usd == pytest.approx(18.0)
-
-    assert buy_trade is not None
-    assert buy_trade.asset == "ETH"
-    assert buy_trade.estimated_value_base == pytest.approx(18000)
-    assert buy_trade.estimated_value_usd == pytest.approx(18000)
-    assert buy_trade.fee_cost_usd == pytest.approx(18.0)
+    assert sell_trade.estimated_value_base == pytest.approx(12000)
+    assert sell_trade.estimated_value_usd == pytest.approx(12000)
+    assert sell_trade.fee_cost_usd == pytest.approx(12.0)
 
     # Assert totals and projected balances
-    assert result.total_fees_usd == pytest.approx(36.0)
+    assert result.total_fees_usd == pytest.approx(12.0, rel=1e-3)
     assert result.projected_balances is not None
-    # Initial: 1.2 BTC. Sell 18k/60k = 0.3 BTC. Final: 0.9 BTC
-    assert result.projected_balances["BTC"]["quantity"] == pytest.approx(0.9)
-    # Initial: 6 ETH. Buy 18k/3k = 6 ETH. After fee: 6 * (1-0.001) = 5.994. Final: 11.994 ETH
-    assert result.projected_balances["ETH"]["quantity"] == pytest.approx(11.994)
-    # Initial: 10k USDT. Buy 18k ETH -> -18k. Sell 18k BTC -> +18k*(1-0.001)=17982. Final: 9982
-    assert result.projected_balances["USDT"]["quantity"] == pytest.approx(9982)
+    # Initial: 1.2 BTC. Sell 12k/60k = 0.2 BTC. Final: 1.0 BTC
+    assert result.projected_balances["BTC"]["quantity"] == pytest.approx(1.0)
+    # Initial: 6 ETH. No trade, so it remains 6.
+    assert result.projected_balances["ETH"]["quantity"] == pytest.approx(6.0)
+    # Initial: 10k USDT. Sell 12k BTC -> +11988. Final: 21988
+    assert result.projected_balances["USDT"]["quantity"] == pytest.approx(21988)
 
 
     # Assert database write
@@ -152,12 +145,12 @@ async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_m
     assert db_run is not None
     assert db_run.status == "DRY_RUN"
     assert db_run.is_dry_run is True
-    assert len(db_run.trades_executed) == 2
+    assert len(db_run.trades_executed) == 1
     assert db_run.trades_executed[0]["asset"] == "BTC"
-    assert db_run.total_fees_usd == pytest.approx(36.0)
+    assert db_run.total_fees_usd == pytest.approx(12.0, rel=1e-3)
     assert db_run.total_value_usd_before == pytest.approx(100000.0)
-    assert db_run.total_value_usd_after == pytest.approx(99964.0)
-    assert db_run.projected_balances["BTC"]["quantity"] == pytest.approx(0.9)
+    assert db_run.total_value_usd_after == pytest.approx(99988.0, rel=1e-3)
+    assert db_run.projected_balances["BTC"]["quantity"] == pytest.approx(1.0)
     assert db_run.trigger == "manual"
     assert db_run.base_pair == "USDT"
 
