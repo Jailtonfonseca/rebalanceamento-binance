@@ -123,8 +123,9 @@ class RebalanceEngine:
                 "projected_balances": {},
             }
 
-        # 3. Calculate deltas and generate proposed trades
-        proposed_trades: List[ProposedTrade] = []
+        # 3. Calculate deltas and identify potential trades
+        potential_trades: List[ProposedTrade] = []
+
         for asset in preliminary_assets:
             if asset == base_pair:
                 continue
@@ -203,22 +204,8 @@ class RebalanceEngine:
             side = "BUY" if delta_value_base > 0 else "SELL"
             reason = f"Target: {target_alloc_pct:.2f}%, Current: {current_alloc_pct:.2f}%, Delta: {delta_pct:.2f}%"
 
-            # Check if there are enough funds for a BUY
-            if side == "BUY":
-                cost = final_trade_value * (1 + trade_fee_pct / 100)
-                if cost > balances.get(base_pair, 0.0):
-                    logger.warning(
-                        "Insufficient funds to place BUY order for %s. Need %s %s, have %s %s",
-                        asset,
-                        cost,
-                        base_pair,
-                        balances.get(base_pair, 0.0),
-                        base_pair,
-                    )
-                    continue
-
-            proposed_trades.append(
-                ProposedTrade(
+            potential_trades.append(
+                 ProposedTrade(
                     symbol=symbol,
                     asset=asset,
                     side=side,
@@ -229,20 +216,110 @@ class RebalanceEngine:
                     fee_cost_usd=fee_cost,
                 )
             )
+
+        # 4. Process trades to ensure fund availability (Double-spend fix)
+        # Segregate BUYs and SELLs
+        sell_trades = [t for t in potential_trades if t.side == "SELL"]
+        buy_trades = [t for t in potential_trades if t.side == "BUY"]
+
+        final_proposed_trades: List[ProposedTrade] = []
+        current_base_balance = balances.get(base_pair, 0.0)
+
+        # Process SELLs first to accumulate funds
+        for trade in sell_trades:
+            final_proposed_trades.append(trade)
+            # Revenue is value of asset minus the fee
+            revenue = trade.estimated_value_base * (1 - trade_fee_pct / 100)
+            current_base_balance += revenue
             logger.info(
-                f"Proposing trade: {side} {adjusted_quantity} {asset} for ~${value_usd:,.2f} (Fee: ~${fee_cost:,.2f})"
+                f"Proposing trade: {trade.side} {trade.quantity} {trade.asset} "
+                f"for ~${trade.estimated_value_usd:,.2f} (Fee: ~${trade.fee_cost_usd:,.2f}). "
+                f"Projected Base Balance: {current_base_balance:.4f}"
             )
 
-        # 4. Calculate projected balances
+        # Process BUYs and check against running balance
+        for trade in buy_trades:
+            cost = trade.estimated_value_base * (1 + trade_fee_pct / 100)
+
+            # If insufficient funds, try to reduce the trade size to fit remaining balance
+            if cost > current_base_balance:
+                logger.warning(
+                    "Insufficient funds to place full BUY order for %s. Need %s %s, have %s %s. "
+                    "Attempting to adjust trade size.",
+                    trade.asset,
+                    cost,
+                    base_pair,
+                    current_base_balance,
+                    base_pair,
+                )
+
+                # Calculate max affordable value in base currency
+                max_affordable_base_value = current_base_balance / (1 + trade_fee_pct / 100)
+
+                # Retrieve symbol info to check filters again
+                symbol_info = exchange_info.get(trade.symbol)
+                if symbol_info:
+                    lot_size_filter = next((f for f in symbol_info.get("filters", []) if f["filterType"] == "LOT_SIZE"), None)
+                    min_notional_filter = next((f for f in symbol_info.get("filters", []) if f["filterType"] in ("MIN_NOTIONAL", "NOTIONAL")), None)
+
+                    if lot_size_filter and min_notional_filter:
+                        step_size = lot_size_filter["stepSize"]
+                        min_notional = float(min_notional_filter["minNotional"])
+
+                        # Price is implicit in trade.estimated_value_base / trade.quantity
+                        # but simpler to just use max_affordable_base_value / price
+                        price = trade.estimated_value_base / trade.quantity if trade.quantity > 0 else 0
+                        if price > 0:
+                            new_quantity = max_affordable_base_value / price
+                            adjusted_quantity = adjust_to_step_size(new_quantity, step_size)
+                            new_trade_value = adjusted_quantity * price
+
+                            if adjusted_quantity > 0 and new_trade_value >= min_notional:
+                                logger.info(f"Adjusting trade for {trade.asset}: Quantity {trade.quantity} -> {adjusted_quantity}")
+                                # Update trade object
+                                trade.quantity = adjusted_quantity
+                                trade.estimated_value_base = new_trade_value
+                                trade.estimated_value_usd = (
+                                    new_trade_value * base_to_usd if base_to_usd is not None else new_trade_value
+                                )
+                                trade.fee_cost_usd = trade.estimated_value_usd * (trade_fee_pct / 100)
+                                trade.reason += " (Adjusted for remaining funds)"
+
+                                # Update cost
+                                cost = new_trade_value * (1 + trade_fee_pct / 100)
+                            else:
+                                logger.warning(f"Remaining funds insufficient for minimum trade size of {trade.asset}. Skipping.")
+                                continue
+                        else:
+                            continue
+                    else:
+                        continue
+                else:
+                    continue
+
+            # Final check in case adjustment failed or wasn't enough (floating point issues)
+            if cost > current_base_balance + 1e-9:
+                 logger.warning(f"Skipping trade for {trade.asset} due to insufficient funds after adjustment.")
+                 continue
+
+            final_proposed_trades.append(trade)
+            current_base_balance -= cost
+            logger.info(
+                f"Proposing trade: {trade.side} {trade.quantity} {trade.asset} "
+                f"for ~${trade.estimated_value_usd:,.2f} (Fee: ~${trade.fee_cost_usd:,.2f}). "
+                f"Projected Base Balance: {current_base_balance:.4f}"
+            )
+
+        # 5. Calculate projected balances
         projected_balances = balances.copy()
-        total_fees_usd = sum(trade.fee_cost_usd for trade in proposed_trades)
+        total_fees_usd = sum(trade.fee_cost_usd for trade in final_proposed_trades)
 
         # Ensure the base_pair key exists before we start modifying it,
         # in case the initial balance for it was zero.
         if base_pair not in projected_balances:
             projected_balances[base_pair] = 0.0
 
-        for trade in proposed_trades:
+        for trade in final_proposed_trades:
             asset_qty_change = trade.quantity
             base_qty_change = trade.estimated_value_base
 
@@ -262,7 +339,7 @@ class RebalanceEngine:
                     1 - trade_fee_pct / 100
                 )
 
-        # 5. Format projected balances with USD values
+        # 6. Format projected balances with USD values
         final_projected_balances = {}
         for asset, qty in projected_balances.items():
             price_in_base = get_asset_base_value(prices, asset, base_pair) or 1.0
@@ -277,7 +354,7 @@ class RebalanceEngine:
             final_projected_balances[asset] = entry
 
         return {
-            "proposed_trades": proposed_trades,
+            "proposed_trades": final_proposed_trades,
             "total_fees_usd": total_fees_usd,
             "projected_balances": final_projected_balances,
         }
