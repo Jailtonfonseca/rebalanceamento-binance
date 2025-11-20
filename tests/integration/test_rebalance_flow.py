@@ -114,42 +114,64 @@ async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_m
     # --- Assertions ---
     # Target: BTC 60%, ETH 40%.
     # Sell BTC: 12% of 100k = 12k. Buy ETH: 22% of 100k = 22k.
-    # The BUY trade will be skipped due to insufficient funds.
+    # Improved Behavior: The BUY trade is now possible using SELL proceeds.
+    # However, total funds (10k + 12k - fees) = ~21988.
+    # Target Buy ETH = 22k. Shortfall ~12.
+    # Logic should reduce Buy size to fit funds.
     assert result.status == "DRY_RUN"
     assert "Simulação concluída" in result.message
-    assert len(result.trades) == 1
+    assert len(result.trades) == 2
 
     sell_trade = next((t for t in result.trades if t.side == "SELL"), None)
     buy_trade = next((t for t in result.trades if t.side == "BUY"), None)
 
     assert sell_trade is not None
-    assert buy_trade is None
+    assert buy_trade is not None
+
+    # Verify SELL BTC
     assert sell_trade.asset == "BTC"
     assert sell_trade.estimated_value_base == pytest.approx(12000)
     assert sell_trade.estimated_value_usd == pytest.approx(12000)
     assert sell_trade.fee_cost_usd == pytest.approx(12.0)
 
+    # Verify BUY ETH (Partial Fill)
+    # Available for Buy: Initial 10000 + Sell Proceeds (12000 * 0.999) = 10000 + 11988 = 21988.
+    # Cost = Value * 1.001.
+    # Max Value = 21988 / 1.001 ~= 21966.03
+    assert buy_trade.asset == "ETH"
+    assert buy_trade.estimated_value_base == pytest.approx(21966, rel=1e-3)
+    assert buy_trade.fee_cost_usd == pytest.approx(21.966, rel=1e-3)
+
     # Assert totals and projected balances
-    assert result.total_fees_usd == pytest.approx(12.0, rel=1e-3)
+    total_fees = 12.0 + buy_trade.fee_cost_usd
+    assert result.total_fees_usd == pytest.approx(total_fees, rel=1e-3)
+
     assert result.projected_balances is not None
     # Initial: 1.2 BTC. Sell 12k/60k = 0.2 BTC. Final: 1.0 BTC
     assert result.projected_balances["BTC"]["quantity"] == pytest.approx(1.0)
-    # Initial: 6 ETH. No trade, so it remains 6.
-    assert result.projected_balances["ETH"]["quantity"] == pytest.approx(6.0)
-    # Initial: 10k USDT. Sell 12k BTC -> +11988. Final: 21988
-    assert result.projected_balances["USDT"]["quantity"] == pytest.approx(21988)
 
+    # Initial: 6 ETH. Buy ~21966 / 3000 = ~7.322 ETH. Final: ~13.322
+    expected_eth_qty = 6.0 + (buy_trade.estimated_value_base / 3000.0)
+    assert result.projected_balances["ETH"]["quantity"] == pytest.approx(expected_eth_qty)
+
+    # Initial: 10k USDT.
+    # Sell 12k BTC -> +11988.
+    # Buy ETH -> Cost ~21988.
+    # Final: ~0 USDT (dust)
+    assert result.projected_balances["USDT"]["quantity"] == pytest.approx(0.0, abs=1.0)
 
     # Assert database write
     db_run = db_session.query(RebalanceRun).filter_by(run_id=result.run_id).first()
     assert db_run is not None
     assert db_run.status == "DRY_RUN"
     assert db_run.is_dry_run is True
-    assert len(db_run.trades_executed) == 1
+    assert len(db_run.trades_executed) == 2
     assert db_run.trades_executed[0]["asset"] == "BTC"
-    assert db_run.total_fees_usd == pytest.approx(12.0, rel=1e-3)
+    assert db_run.trades_executed[1]["asset"] == "ETH"
+    assert db_run.total_fees_usd == pytest.approx(total_fees, rel=1e-3)
     assert db_run.total_value_usd_before == pytest.approx(100000.0)
-    assert db_run.total_value_usd_after == pytest.approx(99988.0, rel=1e-3)
+    # Value after drops by total fees
+    assert db_run.total_value_usd_after == pytest.approx(100000.0 - total_fees, rel=1e-3)
     assert db_run.projected_balances["BTC"]["quantity"] == pytest.approx(1.0)
     assert db_run.trigger == "manual"
     assert db_run.base_pair == "USDT"

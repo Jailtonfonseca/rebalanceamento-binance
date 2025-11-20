@@ -74,10 +74,12 @@ def test_simple_rebalance(rebalance_engine, mock_data):
     )
     trades = result["proposed_trades"]
 
-    assert len(trades) == 1  # Sell BTC. Buy ETH skipped due to insufficient funds.
+    # With the fix, the SELL proceeds are used to fund the BUY.
+    # So we expect 2 trades: Sell BTC and Buy ETH.
+    assert len(trades) == 2
 
     sell_trade = next(t for t in trades if t.side == "SELL")
-    buy_trade = next((t for t in trades if t.side == "BUY"), None)
+    buy_trade = next(t for t in trades if t.side == "BUY")
 
     # Based on TOTAL value of 100k:
     # Sell BTC: current 75k, target 60k -> Sell 15k
@@ -87,7 +89,9 @@ def test_simple_rebalance(rebalance_engine, mock_data):
     assert sell_trade.estimated_value_usd == pytest.approx(15000, rel=1e-3)
     assert sell_trade.quantity == pytest.approx(15000 / 50000, rel=1e-3)
 
-    assert buy_trade is None
+    assert buy_trade.asset == "ETH"
+    assert buy_trade.estimated_value_base == pytest.approx(10000, rel=1e-3)
+    assert buy_trade.estimated_value_usd == pytest.approx(10000, rel=1e-3)
 
 
 def test_trade_below_min_value_is_ignored(rebalance_engine, mock_data):
@@ -132,9 +136,16 @@ def test_trade_below_min_notional_is_ignored(rebalance_engine, mock_data):
     )
     trades = result["proposed_trades"]
 
-    # No trades should be proposed. The BTC trade is below min notional,
-    # and the ETH trade is skipped due to insufficient funds.
-    assert len(trades) == 0
+    # BTC trade is below min notional (15k < 20k) -> Skipped.
+    # ETH trade (Buy ~10k) exceeds available funds (5k).
+    # New behavior: It should adjust the trade to buy as much ETH as possible with 5k.
+    assert len(trades) == 1
+    eth_trade = trades[0]
+    assert eth_trade.asset == "ETH"
+    assert eth_trade.side == "BUY"
+    # We expect it to use roughly the full 5000 USDT (minus fees)
+    # 5000 / (1 + 0.001) approx 4995
+    assert eth_trade.estimated_value_base == pytest.approx(5000 / 1.001, rel=1e-3)
 
 
 def test_asset_not_in_cmc_list_is_ignored(rebalance_engine, mock_data):
@@ -163,8 +174,8 @@ def test_asset_not_in_cmc_list_is_ignored(rebalance_engine, mock_data):
 def test_new_asset_to_buy(rebalance_engine, mock_data):
     """Test buying a new asset that is not currently in the wallet."""
     target_allocations = {"BTC": 70.0, "ETH": 20.0, "USDT": 0.0, "BNB": 10.0}
-    mock_data["balances"]["USDT"] = 15000  # Increase USDT to have funds
-    # Total value = 75k + 20k + 15k = 110k
+    mock_data["balances"]["USDT"] = 20000  # Increase USDT to have sufficient funds including fees
+    # Total value = 75k + 20k + 20k = 115k
 
     result = rebalance_engine.run(
         balances=mock_data["balances"],
@@ -182,10 +193,12 @@ def test_new_asset_to_buy(rebalance_engine, mock_data):
     buy_bnb_trade = next((t for t in trades if t.asset == "BNB"), None)
     assert buy_bnb_trade is not None
     assert buy_bnb_trade.side == "BUY"
-    # Target value is 10% of total value (110k) = 11k
-    assert buy_bnb_trade.estimated_value_base == pytest.approx(11000, rel=1e-3)
-    assert buy_bnb_trade.estimated_value_usd == pytest.approx(11000, rel=1e-3)
-    assert buy_bnb_trade.quantity == pytest.approx(11000 / 300.0, rel=1e-3)
+    # Target value is 10% of total value (115k) = 11.5k.
+    # However, due to fees consuming the cash buffer, the trade might be slightly reduced.
+    # We check that it's within 1% of the target.
+    assert buy_bnb_trade.estimated_value_base == pytest.approx(11500, rel=0.01)
+    assert buy_bnb_trade.estimated_value_usd == pytest.approx(11500, rel=0.01)
+    assert buy_bnb_trade.quantity == pytest.approx(11500 / 300.0, rel=0.01)
 
 
 def test_projected_balances_with_buy_fee(rebalance_engine, mock_data):
