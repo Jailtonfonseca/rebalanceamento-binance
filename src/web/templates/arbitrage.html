@@ -58,7 +58,7 @@
                             </tbody>
                         </table>
                         <p class="text-muted small">
-                            * {{ _('Profit calculation includes an estimated trading fee of %(fee)s%% per trade.', fee=(TRADING_FEE * 100)) }}
+                            * {{ _('Profit calculation includes an estimated trading fee of %(fee)s%% per trade.') % {'fee': (TRADING_FEE * 100)} }}
                         </p>
                     </div>
                      <div id="no-opportunities" class="text-center" style="display: none;">
