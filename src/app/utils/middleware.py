@@ -42,7 +42,9 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
             return response
         finally:
             duration_ms = (time.perf_counter() - start) * 1000
-            status_code = response.status_code if isinstance(response, Response) else 500
+            status_code = (
+                response.status_code if isinstance(response, Response) else 500
+            )
             # Minimal access log to avoid leaking sensitive data
             logger.info(
                 json.dumps(

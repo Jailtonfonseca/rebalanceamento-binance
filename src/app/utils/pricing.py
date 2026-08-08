@@ -5,6 +5,7 @@ currencies using the ticker price map returned by Binance. They make it easier
 to express values in the configured base pair as well as in USD, which we use
 for reporting and for enforcing trade thresholds.
 """
+
 from __future__ import annotations
 
 from typing import Mapping, Optional

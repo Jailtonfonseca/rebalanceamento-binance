@@ -1,5 +1,4 @@
 import logging
-import bcrypt
 from fastapi import APIRouter, Depends, Form, Request, HTTPException
 from starlette.responses import RedirectResponse
 
@@ -8,6 +7,7 @@ from app.services.config_manager import ConfigManager, get_config_manager, AppSe
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
 
 @router.post("/setup")
 async def handle_initial_setup(

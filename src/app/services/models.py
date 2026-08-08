@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from app.utils.time import utc_now
 
+
 class ProposedTrade(BaseModel):
     """Represents a single trade calculated by the rebalancing engine.
 

@@ -2,15 +2,18 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from app.services.arbitrage_service import ArbitrageService
 
+
 @pytest.fixture
 def mock_client():
     """Fixture to create a mock httpx.AsyncClient."""
     return AsyncMock()
 
+
 @pytest.fixture
 def arbitrage_service(mock_client):
     """Fixture to create an instance of ArbitrageService with a mock client."""
     return ArbitrageService(client=mock_client)
+
 
 @pytest.mark.anyio
 async def test_fetch_market_data_success(arbitrage_service, mock_client):
@@ -50,97 +53,65 @@ def test_get_triangular_paths(arbitrage_service):
     assert len(paths) == 1
     assert ("BTC", "ETH", "USDT") in paths
 
+
 def test_calculate_profitability_profitable(arbitrage_service):
     """
     Tests the profitability calculation for a profitable path.
     """
-    # Simulate a profitable opportunity: 1/50000 * 4000 / (1/0.08) > 1
-    # Let's make it more obvious: BTC -> ETH -> USDT -> BTC
-    # USDT/BTC: 50000, ETH/USDT: 4000, BTC/ETH: 1/0.08 = 12.5. This is not a triangle.
-    # Let's try BTC -> ETH -> USDT -> BTC
-    # Path: (BTC, ETH, USDT)
-    # Trade 1: BTC -> ETH (ETHBTC)
-    # Trade 2: ETH -> USDT (ETHUSDT)
-    # Trade 3: USDT -> BTC (BTCUSDT) - we need price of BTC in USDT
-
-    # Let's define a clear profitable path: A->B->C->A
-    # Start with 1 A. Buy B. Buy C. Buy A.
-    # 1 A -> rate(B/A) B -> rate(B/A) * rate(C/B) C -> rate(B/A) * rate(C/B) * rate(A/C) A
-    path = ("BTC", "ETH", "USDT")
-    arbitrage_service.prices = {
-        "ETHBTC": 0.08,      # 1 BTC = 0.08 ETH
-        "ETHUSDT": 4000,    # 1 ETH = 4000 USDT
-        "BTCUSDT": 50001,   # 1 BTC = 50001 USDT (This makes it profitable)
-    }
-    # Calculation: 1 / 0.08 * 1/4000 * 50001 = 1.00002
-    # Let's trace it manually
-    # 1 BTC -> 1/0.08 ETH -> (1/0.08)*4000 USDT -> (1/0.08)*4000 / 50001 BTC
-    # (1/0.08) * 4000 / 50001 = 12.5 * 4000 / 50001 = 50000/50001 < 1. This is a loss.
-    # The formula needs to be rate1 * rate2 * rate3.
-    # Let's check the implementation:
-    # rate1 = prices[f"{b}{a}"] -> ETHBTC
-    # rate2 = prices[f"{c}{b}"] -> USDTETH (needs to be defined)
-    # rate3 = prices[f"{a}{c}"] -> BTCUSDT
-
-    # Correct path: (BTC, ETH, USDT)
+    # Real Binance symbols are base+quote. The service must handle both direct
+    # and inverse pairs when walking BTC -> ETH -> USDT -> BTC.
     arbitrage_service.prices = {
         "ETHBTC": 0.08,
-        "USDTETH": 1/4000,
-        "BTCUSDT": 50001,
-    }
-    # This is not how Binance lists pairs. Let's use the implementation's logic.
-    # The code checks for f"{b}{a}", f"{c}{b}", f"{a}{c}"
-    # Path: (A, B, C) -> (BTC, ETH, BNB)
-    # 1. B/A -> ETHBTC
-    # 2. C/B -> BNBETH
-    # 3. A/C -> BTCBNB
-    arbitrage_service.prices = {
-        "ETHBTC": 12.0,      # rate1
-        "BNBETH": 0.15,      # rate2
-        "BTCBNB": 0.6,       # rate3 -> 12 * 0.15 * 0.6 = 1.08 (profitable)
+        "ETHUSDT": 4000.0,
+        "BTCUSDT": 49000.0,
     }
 
-    opportunity = arbitrage_service._calculate_profitability(("BTC", "ETH", "BNB"))
+    opportunity = arbitrage_service._calculate_profitability(("BTC", "ETH", "USDT"))
     assert opportunity is not None
-    assert opportunity["path"] == "BTC -> ETH -> BNB -> BTC"
+    assert opportunity["path"] == "BTC -> ETH -> USDT -> BTC"
     assert opportunity["profit_margin_percent"] > 0
+
 
 def test_calculate_profitability_not_profitable(arbitrage_service):
     """
     Tests the profitability calculation for a non-profitable path.
     """
     arbitrage_service.prices = {
-        "ETHBTC": 12.0,
-        "BNBETH": 0.15,
-        "BTCBNB": 0.5, # 12 * 0.15 * 0.5 = 0.9 (loss)
+        "ETHBTC": 0.08,
+        "ETHUSDT": 4000.0,
+        "BTCUSDT": 50000.0,
     }
     opportunity = arbitrage_service._calculate_profitability(("BTC", "ETH", "BNB"))
     assert opportunity is None
+
 
 @pytest.mark.anyio
 async def test_find_opportunities_integration(arbitrage_service):
     """
     An integration-style test for the find_opportunities method.
     """
-    with patch.object(arbitrage_service, 'fetch_market_data', new_callable=AsyncMock) as mock_fetch:
+    with patch.object(
+        arbitrage_service, "fetch_market_data", new_callable=AsyncMock
+    ) as mock_fetch:
         arbitrage_service.prices = {
             # Profitable path
-            "ETHBTC": 12.0,
+            "ETHBTC": 0.08,
             "BNBETH": 0.15,
-            "BTCBNB": 0.6,
+            "BNBBTC": 0.013,
             # Unprofitable path
             "ADABTC": 0.00001,
             "XRPADA": 100,
-            "BTCXRP": 0.00002,
+            "XRPBTC": 0.0000009,
             # Other symbols to create assets
-            "LTCUSDT": 100
+            "LTCUSDT": 100,
         }
         arbitrage_service.symbols = list(arbitrage_service.prices.keys())
 
-        # Mock the asset filtering to use our test assets
-        assets_to_check = ["BTC", "ETH", "BNB", "ADA", "XRP"]
-        with patch('app.services.arbitrage_service.ArbitrageService._get_triangular_paths',
-                   return_value=[("BTC", "ETH", "BNB"), ("BTC", "ADA", "XRP")]) as mock_paths:
+        # Mock the path generation to keep this test focused on ranking/filtering.
+        with patch(
+            "app.services.arbitrage_service.ArbitrageService._get_triangular_paths",
+            return_value=[("BTC", "ETH", "BNB"), ("BTC", "ADA", "XRP")],
+        ):
 
             opportunities = await arbitrage_service.find_opportunities()
 

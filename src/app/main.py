@@ -1,11 +1,8 @@
-from pathlib import Path
-from pathlib import Path
-from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 import logging
 from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from prometheus_fastapi_instrumentator import Instrumentator
 

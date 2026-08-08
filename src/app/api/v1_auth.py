@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, Form, HTTPException
+from fastapi import APIRouter, Depends, Form
 from starlette.responses import RedirectResponse
 
 from app.core.security import create_access_token, verify_password
 from app.services.config_manager import AppSettings, get_settings
 
 router = APIRouter()
+
 
 @router.post("/login")
 async def login(

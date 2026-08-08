@@ -21,12 +21,15 @@ class Jinja2Templates(_Jinja2Templates):
     """
     A custom Jinja2Templates class that handles i18n translations automatically.
     """
+
     def TemplateResponse(self, name: str, context: dict, *args, **kwargs):
         request = context.get("request")
         if isinstance(request, Request):
             language = getattr(request.state, "language", "en")
             try:
-                translations = Translations.load(str(LOCALE_DIR), [language], domain="messages")
+                translations = Translations.load(
+                    str(LOCALE_DIR), [language], domain="messages"
+                )
                 self.env.install_gettext_translations(translations)
             except FileNotFoundError:
                 # Fallback to no translations if the .mo file doesn't exist yet

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 import logging
 from typing import List, Dict
 
@@ -21,5 +21,5 @@ async def get_arbitrage_opportunities():
         logger.error(f"Error fetching arbitrage opportunities: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail="An internal error occurred while scanning for arbitrage opportunities."
+            detail="An internal error occurred while scanning for arbitrage opportunities.",
         )

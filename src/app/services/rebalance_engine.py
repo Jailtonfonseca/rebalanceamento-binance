@@ -88,7 +88,9 @@ class RebalanceEngine:
 
             price_in_base = get_asset_base_value(prices, asset, base_pair)
             if price_in_base is None:
-                logger.debug("Skipping asset %s; missing %s pair price", asset, base_pair)
+                logger.debug(
+                    "Skipping asset %s; missing %s pair price", asset, base_pair
+                )
                 continue
 
             value_in_base = quantity * price_in_base
@@ -152,9 +154,7 @@ class RebalanceEngine:
             symbol = f"{asset}{base_pair}"
             price = get_asset_base_value(prices, asset, base_pair)
             if not price:
-                logger.warning(
-                    f"No price found for {symbol}. Skipping asset {asset}."
-                )
+                logger.warning(f"No price found for {symbol}. Skipping asset {asset}.")
                 continue
 
             symbol_info = exchange_info.get(symbol)
@@ -198,14 +198,16 @@ class RebalanceEngine:
                 continue
 
             value_usd = (
-                final_trade_value * base_to_usd if base_to_usd is not None else final_trade_value
+                final_trade_value * base_to_usd
+                if base_to_usd is not None
+                else final_trade_value
             )
             fee_cost = value_usd * (trade_fee_pct / 100)
             side = "BUY" if delta_value_base > 0 else "SELL"
             reason = f"Target: {target_alloc_pct:.2f}%, Current: {current_alloc_pct:.2f}%, Delta: {delta_pct:.2f}%"
 
             potential_trades.append(
-                 ProposedTrade(
+                ProposedTrade(
                     symbol=symbol,
                     asset=asset,
                     side=side,
@@ -254,13 +256,29 @@ class RebalanceEngine:
                 )
 
                 # Calculate max affordable value in base currency
-                max_affordable_base_value = current_base_balance / (1 + trade_fee_pct / 100)
+                max_affordable_base_value = current_base_balance / (
+                    1 + trade_fee_pct / 100
+                )
 
                 # Retrieve symbol info to check filters again
                 symbol_info = exchange_info.get(trade.symbol)
                 if symbol_info:
-                    lot_size_filter = next((f for f in symbol_info.get("filters", []) if f["filterType"] == "LOT_SIZE"), None)
-                    min_notional_filter = next((f for f in symbol_info.get("filters", []) if f["filterType"] in ("MIN_NOTIONAL", "NOTIONAL")), None)
+                    lot_size_filter = next(
+                        (
+                            f
+                            for f in symbol_info.get("filters", [])
+                            if f["filterType"] == "LOT_SIZE"
+                        ),
+                        None,
+                    )
+                    min_notional_filter = next(
+                        (
+                            f
+                            for f in symbol_info.get("filters", [])
+                            if f["filterType"] in ("MIN_NOTIONAL", "NOTIONAL")
+                        ),
+                        None,
+                    )
 
                     if lot_size_filter and min_notional_filter:
                         step_size = lot_size_filter["stepSize"]
@@ -268,27 +286,44 @@ class RebalanceEngine:
 
                         # Price is implicit in trade.estimated_value_base / trade.quantity
                         # but simpler to just use max_affordable_base_value / price
-                        price = trade.estimated_value_base / trade.quantity if trade.quantity > 0 else 0
+                        price = (
+                            trade.estimated_value_base / trade.quantity
+                            if trade.quantity > 0
+                            else 0
+                        )
                         if price > 0:
                             new_quantity = max_affordable_base_value / price
-                            adjusted_quantity = adjust_to_step_size(new_quantity, step_size)
+                            adjusted_quantity = adjust_to_step_size(
+                                new_quantity, step_size
+                            )
                             new_trade_value = adjusted_quantity * price
 
-                            if adjusted_quantity > 0 and new_trade_value >= min_notional:
-                                logger.info(f"Adjusting trade for {trade.asset}: Quantity {trade.quantity} -> {adjusted_quantity}")
+                            if (
+                                adjusted_quantity > 0
+                                and new_trade_value >= min_notional
+                            ):
+                                logger.info(
+                                    f"Adjusting trade for {trade.asset}: Quantity {trade.quantity} -> {adjusted_quantity}"
+                                )
                                 # Update trade object
                                 trade.quantity = adjusted_quantity
                                 trade.estimated_value_base = new_trade_value
                                 trade.estimated_value_usd = (
-                                    new_trade_value * base_to_usd if base_to_usd is not None else new_trade_value
+                                    new_trade_value * base_to_usd
+                                    if base_to_usd is not None
+                                    else new_trade_value
                                 )
-                                trade.fee_cost_usd = trade.estimated_value_usd * (trade_fee_pct / 100)
+                                trade.fee_cost_usd = trade.estimated_value_usd * (
+                                    trade_fee_pct / 100
+                                )
                                 trade.reason += " (Adjusted for remaining funds)"
 
                                 # Update cost
                                 cost = new_trade_value * (1 + trade_fee_pct / 100)
                             else:
-                                logger.warning(f"Remaining funds insufficient for minimum trade size of {trade.asset}. Skipping.")
+                                logger.warning(
+                                    f"Remaining funds insufficient for minimum trade size of {trade.asset}. Skipping."
+                                )
                                 continue
                         else:
                             continue
@@ -299,8 +334,10 @@ class RebalanceEngine:
 
             # Final check in case adjustment failed or wasn't enough (floating point issues)
             if cost > current_base_balance + 1e-9:
-                 logger.warning(f"Skipping trade for {trade.asset} due to insufficient funds after adjustment.")
-                 continue
+                logger.warning(
+                    f"Skipping trade for {trade.asset} due to insufficient funds after adjustment."
+                )
+                continue
 
             final_proposed_trades.append(trade)
             current_base_balance -= cost
@@ -325,9 +362,9 @@ class RebalanceEngine:
 
             if trade.side == "BUY":
                 # Fee is paid from the base pair (e.g., USDT)
-                projected_balances[trade.asset] = projected_balances.get(
-                    trade.asset, 0
-                ) + asset_qty_change
+                projected_balances[trade.asset] = (
+                    projected_balances.get(trade.asset, 0) + asset_qty_change
+                )
                 # Cost includes value of asset plus the fee
                 projected_balances[base_pair] -= base_qty_change * (
                     1 + trade_fee_pct / 100
