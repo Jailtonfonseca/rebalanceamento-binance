@@ -50,6 +50,7 @@ class I18nMiddleware(BaseHTTPMiddleware):
 # A list of paths that are allowed during the setup process.
 SETUP_PATHS = ["/setup", "/api/v1/setup", "/static"]
 
+
 class SetupMiddleware(BaseHTTPMiddleware):
     """
     Redirects to the setup page if the application is not yet configured.
@@ -87,7 +88,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         response = await call_next(request)
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         # A basic Content Security Policy (CSP) to mitigate XSS.

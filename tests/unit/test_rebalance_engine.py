@@ -174,7 +174,9 @@ def test_asset_not_in_cmc_list_is_ignored(rebalance_engine, mock_data):
 def test_new_asset_to_buy(rebalance_engine, mock_data):
     """Test buying a new asset that is not currently in the wallet."""
     target_allocations = {"BTC": 70.0, "ETH": 20.0, "USDT": 0.0, "BNB": 10.0}
-    mock_data["balances"]["USDT"] = 20000  # Increase USDT to have sufficient funds including fees
+    mock_data["balances"][
+        "USDT"
+    ] = 20000  # Increase USDT to have sufficient funds including fees
     # Total value = 75k + 20k + 20k = 115k
 
     result = rebalance_engine.run(

@@ -152,7 +152,9 @@ async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_m
 
     # Initial: 6 ETH. Buy ~21966 / 3000 = ~7.322 ETH. Final: ~13.322
     expected_eth_qty = 6.0 + (buy_trade.estimated_value_base / 3000.0)
-    assert result.projected_balances["ETH"]["quantity"] == pytest.approx(expected_eth_qty)
+    assert result.projected_balances["ETH"]["quantity"] == pytest.approx(
+        expected_eth_qty
+    )
 
     # Initial: 10k USDT.
     # Sell 12k BTC -> +11988.
@@ -171,7 +173,9 @@ async def test_rebalance_flow_direct_call(db_session, monkeypatch, mock_config_m
     assert db_run.total_fees_usd == pytest.approx(total_fees, rel=1e-3)
     assert db_run.total_value_usd_before == pytest.approx(100000.0)
     # Value after drops by total fees
-    assert db_run.total_value_usd_after == pytest.approx(100000.0 - total_fees, rel=1e-3)
+    assert db_run.total_value_usd_after == pytest.approx(
+        100000.0 - total_fees, rel=1e-3
+    )
     assert db_run.projected_balances["BTC"]["quantity"] == pytest.approx(1.0)
     assert db_run.trigger == "manual"
     assert db_run.base_pair == "USDT"

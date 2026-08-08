@@ -73,10 +73,7 @@ async def get_config_page(
 async def get_history_page(request: Request, db: Session = Depends(get_db)):
     """Serves the rebalancing history page."""
     history = (
-        db.query(RebalanceRun)
-        .order_by(RebalanceRun.timestamp.desc())
-        .limit(100)
-        .all()
+        db.query(RebalanceRun).order_by(RebalanceRun.timestamp.desc()).limit(100).all()
     )
 
     for run in history:

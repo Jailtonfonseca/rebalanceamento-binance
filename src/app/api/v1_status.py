@@ -114,7 +114,9 @@ async def get_current_balances(
             "base_pair": base_pair,
             "base_to_usd_rate": base_to_usd,
             "total_value_in_base": round(total_value_base, 2),
-            "total_value_usd": round(total_value_usd, 2) if total_value_usd is not None else None,
+            "total_value_usd": (
+                round(total_value_usd, 2) if total_value_usd is not None else None
+            ),
             "balances": balances_with_value,
         }
 

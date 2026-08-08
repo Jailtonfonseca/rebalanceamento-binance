@@ -14,7 +14,6 @@ from typing import Dict, Literal, Optional
 import logging
 from cryptography.fernet import Fernet, InvalidToken
 from pydantic import BaseModel, Field, ValidationError, field_validator
-import bcrypt
 
 logger = logging.getLogger(__name__)
 

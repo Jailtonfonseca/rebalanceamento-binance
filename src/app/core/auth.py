@@ -4,9 +4,12 @@ from starlette.responses import RedirectResponse
 from app.core.security import decode_access_token
 from app.services.config_manager import AppSettings, get_settings
 
+
 class AuthRedirectException(HTTPException):
     """Custom exception to handle redirecting unauthenticated users."""
+
     pass
+
 
 def get_current_user(
     request: Request, settings: AppSettings = Depends(get_settings)
@@ -28,10 +31,11 @@ def get_current_user(
         # If the token is invalid or the username doesn't match the configured admin,
         # treat as unauthenticated.
         response = RedirectResponse(url="/login")
-        response.delete_cookie("access_token") # Clear the invalid cookie
+        response.delete_cookie("access_token")  # Clear the invalid cookie
         return response
 
     return username
+
 
 def get_current_user_optional(
     request: Request, settings: AppSettings = Depends(get_settings)

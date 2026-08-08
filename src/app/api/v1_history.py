@@ -71,11 +71,7 @@ async def get_portfolio_statistics(db: Session = Depends(get_db)) -> Dict[str, o
         and a mapping with the historical values for each individual asset.
     """
 
-    runs = (
-        db.query(RebalanceRun)
-        .order_by(RebalanceRun.timestamp.asc())
-        .all()
-    )
+    runs = db.query(RebalanceRun).order_by(RebalanceRun.timestamp.asc()).all()
 
     portfolio_points: List[Dict[str, object]] = []
     asset_points: Dict[str, List[Dict[str, object]]] = defaultdict(list)
@@ -90,11 +86,7 @@ async def get_portfolio_statistics(db: Session = Depends(get_db)) -> Dict[str, o
         total_after = run.total_value_usd_after
         if total_after is None and isinstance(run.projected_balances, dict):
             total_after = sum(
-                float(
-                    details.get("value_usd")
-                    or details.get("value_in_base")
-                    or 0.0
-                )
+                float(details.get("value_usd") or details.get("value_in_base") or 0.0)
                 for details in run.projected_balances.values()
                 if isinstance(details, dict)
             )
